@@ -44,3 +44,14 @@ jobs:
 
       - name: Compilar APK Android de depuración
         run: flutter build apk --debug
+
+      - name: Compilar AAB Android de depuración
+        run: flutter build appbundle --debug
+
+      - name: Publicar APK IA Flutter5
+        uses: actions/upload-artifact@v4
+        with:
+          name: interautomy-mobile-ia-flutter5-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
