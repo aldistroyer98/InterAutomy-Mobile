@@ -127,6 +127,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
                 initialValue: _lineFilter,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Filtrar por línea',
                   prefixIcon: Icon(Icons.filter_alt_outlined),
@@ -179,7 +180,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 return SliverGrid(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: columns,
-                    mainAxisExtent: 255,
+                    mainAxisExtent: 280,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
@@ -410,6 +411,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
               DropdownButtonFormField<String>(
                 key: const Key('add-product-line'),
                 initialValue: _lineId,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: '1. Línea'),
                 items: widget.appState.lines
                     .map(
@@ -431,6 +433,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
               DropdownButtonFormField<String>(
                 key: ValueKey('product-$_lineId'),
                 initialValue: _productId,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: '2. Producto'),
                 items: _products
                     .map(
@@ -456,6 +459,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
               DropdownButtonFormField<String?>(
                 key: ValueKey('comodato-$_lineId-$_productId'),
                 initialValue: _comodatoId,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: '3. Comodato'),
                 items: [
                   const DropdownMenuItem(
@@ -603,6 +607,7 @@ class _EditProductSheetState extends State<_EditProductSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _comodatoId,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Comodato'),
                 items: [
                   const DropdownMenuItem(

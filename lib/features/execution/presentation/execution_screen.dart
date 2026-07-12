@@ -208,7 +208,7 @@ class ExecutionScreen extends ConsumerWidget {
                       leading: const Icon(Icons.circle, size: 12),
                       title: Text(entry.message),
                       subtitle: Text(
-                        '${DateFormat.Hms('es_PE').format(entry.timestamp)} · ${entry.status.label}',
+                        '${DateFormat('HH:mm:ss').format(entry.timestamp)} · ${entry.status.label}',
                       ),
                     ),
                   ),

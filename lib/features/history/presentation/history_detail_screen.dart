@@ -33,7 +33,7 @@ class HistoryDetailScreen extends ConsumerWidget {
                   leading: const Icon(Icons.history),
                   title: Text(record.clientName),
                   subtitle: Text(
-                    '${DateFormat('dd/MM/yyyy HH:mm', 'es_PE').format(record.createdAt)}\n'
+                    '${DateFormat('dd/MM/yyyy HH:mm').format(record.createdAt)}\n'
                     '${record.lineNames.join(', ')}',
                   ),
                   trailing: Chip(label: Text(record.status.label)),

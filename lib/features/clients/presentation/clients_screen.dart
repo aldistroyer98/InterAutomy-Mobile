@@ -143,6 +143,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
               child: DropdownButtonFormField<String>(
                 key: const Key('client-selector'),
                 initialValue: selectedValue,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Cliente',
                   prefixIcon: Icon(Icons.apartment),
@@ -291,6 +292,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 _textField('horaFin', 'Hora de fin'),
                 DropdownButtonFormField<String>(
                   initialValue: client.moneda,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Moneda'),
                   items: const [
                     DropdownMenuItem(value: 'Soles', child: Text('Soles')),

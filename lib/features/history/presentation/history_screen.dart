@@ -60,6 +60,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<ExecutionStatus?>(
                 initialValue: _status,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Filtrar por estado',
                 ),
@@ -114,10 +115,7 @@ class _HistoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final date = DateFormat(
-      'dd/MM/yyyy · HH:mm',
-      'es_PE',
-    ).format(record.createdAt);
+    final date = DateFormat('dd/MM/yyyy · HH:mm').format(record.createdAt);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
