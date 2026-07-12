@@ -215,4 +215,32 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('modo desarrollador habilita Inspector Web desde configuración', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('developer-mode-switch')),
+      500,
+      scrollable: find.descendant(
+        of: find.byKey(const PageStorageKey('settings-scroll')),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              widget.axisDirection == AxisDirection.down,
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('developer-mode-switch')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('diagnostic-mode-switch')), findsOneWidget);
+    expect(find.byKey(const Key('open-web-inspector')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('open-web-inspector')));
+    await tester.pumpAndSettle();
+    expect(find.text('Inspector Web'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
