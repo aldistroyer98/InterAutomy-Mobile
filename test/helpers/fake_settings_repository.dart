@@ -5,7 +5,7 @@ final class FakeSettingsRepository implements SettingsRepository {
   FakeSettingsRepository({
     this.settings = const AppSettings(
       demoMode: true,
-      apiUrl: 'http://localhost:8000',
+      portalUrl: '',
       theme: AppThemePreference.system,
     ),
   });

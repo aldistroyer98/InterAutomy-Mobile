@@ -39,3 +39,6 @@ jobs:
 
       - name: Ejecutar pruebas
         run: flutter test
+
+      - name: Compilar APK Android de depuración
+        run: flutter build apk --debug

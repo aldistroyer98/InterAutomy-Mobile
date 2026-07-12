@@ -1,55 +1,33 @@
-# Validación del MVP móvil
+# Validación IA Flutter3
 
-Fecha: 12 de julio de 2026 (America/Lima).
+Fecha de inicio: 12 de julio de 2026 (America/Lima).
 
-## Entorno
+## Línea base confirmada
 
-- Flutter 3.44.6 estable.
-- Dart 3.12.2.
-- Android SDK 36.1; plataforma 35 instalada por Gradle para el proyecto.
-- Android application ID: `com.sistemasanaliticos.interautomy_mobile`.
-- Baseline móvil: `139cf01` (`IA Flutter1`).
-- Referencia desktop: `e238e4788e40d96c7d3f2387dcc60d51123159b0` (`IA1`).
+- Proyecto móvil: `main`, `8b0fb34` (`IA Flutter2`), árbol limpio antes de
+  editar.
+- Referencia desktop analizada sin modificar: `e238e4788e40d96c7d3f2387dcc60d51123159b0` (`IA1`).
+- Dependencias WebView resueltas localmente: `webview_flutter 4.14.1` y
+  `webview_flutter_android 4.13.0`.
 
-## Controles ejecutados
+## Controles de esta iteración
 
 | Control | Resultado |
 | --- | --- |
-| `dart format .` | 57 archivos, 0 cambios pendientes |
-| `flutter pub get` | Correcto |
-| `flutter analyze` | Sin incidencias |
-| `flutter test` | 21 pruebas aprobadas |
-| Widget compacto 390×844 | Aprobado, sin overflow |
-| Widget expandido 1100×800 | Aprobado, sin overflow |
-| `flutter build apk --debug` | Correcto |
-| `flutter build appbundle --debug` | Correcto |
-| Marcadores TODO/FIXME/plantilla | Ninguno |
-| Patrones de secretos | Ninguno |
-| Archivos desktop copiados | Ninguno |
-| Carpeta de proyecto anidada | Ninguna |
+| `dart format` | Ejecutado; el formateador no reportó cambios pendientes. |
+| `dart pub get --offline` | Dependencias resueltas; el sandbox impide actualizar telemetría fuera del workspace. |
+| `dart analyze` | Sin incidencias, ejecutado con el SDK Dart del entorno. |
+| `flutter test` | Pendiente de ejecución final por bloqueo externo del wrapper Flutter. |
+| APK / AAB | Pendientes de ejecución final por el mismo bloqueo del wrapper Flutter. |
+| Portal Automy real | No ejecutado: no se proporcionó URL ni acceso autorizado. |
 
-El escenario completo cliente → producto → ejecución → revisión → confirmación
-→ historial se ejecuta en la suite widget con gateway instantáneo. También
-existe `integration_test/app_flow_test.dart`; su ejecución instrumentada queda
-condicionada a un dispositivo Android externo, porque esta estación no dispone
-de dispositivo ni AVD y Flutter no admite integration tests en Chrome.
+El bloqueo observado del wrapper `flutter --version` supera 60 segundos en esta
+sesión. El binario Dart del SDK funciona, por lo que permitió formato, resolución
+offline y análisis. No se inventan resultados de APK, AAB ni pruebas contra
+Automy real.
 
-## Artefactos
+## Evidencia pendiente manual
 
-Los artefactos viven en `build/` y no se incluyen en Git.
-
-| Artefacto | Tamaño | SHA-256 |
-| --- | ---: | --- |
-| `build/app/outputs/flutter-apk/app-debug.apk` | 161,541,229 bytes | `ED27EB23B1814BCBAECF5BA68CA73101F76FB09CA3389D33A315D1CE8DA51566` |
-| `build/app/outputs/bundle/debug/app-debug.aab` | 77,877,193 bytes | `FA2972C832F9A596FB79ED4B9200B04BBD5357FDE29B091A071B30943C6E13F4` |
-
-## Observaciones del entorno
-
-- `flutter doctor` solo reporta Visual Studio ausente; no afecta Android.
-- Windows tiene Developer Mode desactivado. Tras `flutter clean`, se usaron
-  junctions efímeros dentro de `windows/flutter/ephemeral` para que Flutter
-  recreara plugins sin cambiar ajustes del sistema. Esos archivos están
-  ignorados por Git.
-- `package_info_plus` se actualizó a 10.2.0, compatible con Flutter 3.44 y
-  soporte de Kotlin integrado; la compilación final no presenta la advertencia
-  de Kotlin que emitía la versión 9.x.
+Seguir [WEBVIEW_TEST_PLAN.md](WEBVIEW_TEST_PLAN.md) con URL y cuenta de prueba
+autorizadas antes de habilitar selectores de cliente adicionales, productos,
+comodatos, importación o envío automático.

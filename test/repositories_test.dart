@@ -70,20 +70,20 @@ void main() {
     expect(await repository.search(query: 'abbott'), [record]);
   });
 
-  test('preferencias locales conservan demo URL y tema', () async {
+  test('preferencias locales conservan demo portal y tema', () async {
     SharedPreferences.setMockInitialValues({});
-    final repository = LocalSettingsRepository(
-      defaultApiUrl: 'http://default.test',
-    );
+    final repository = LocalSettingsRepository(defaultPortalUrl: '');
     const expected = AppSettings(
       demoMode: false,
-      apiUrl: 'https://api.example.test',
+      portalUrl: 'https://automy.example.test',
+      additionalAllowedHosts: ['login.example.test'],
       theme: AppThemePreference.dark,
     );
     await repository.save(expected);
     final restored = await repository.load();
     expect(restored.demoMode, expected.demoMode);
-    expect(restored.apiUrl, expected.apiUrl);
+    expect(restored.portalUrl, expected.portalUrl);
+    expect(restored.additionalAllowedHosts, expected.additionalAllowedHosts);
     expect(restored.theme, expected.theme);
   });
 }

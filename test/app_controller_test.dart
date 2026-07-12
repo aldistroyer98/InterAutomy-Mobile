@@ -122,11 +122,11 @@ void main() {
     final settings = container
         .read(appControllerProvider)
         .settings
-        .copyWith(demoMode: false, apiUrl: 'https://api.example.test');
+        .copyWith(demoMode: false, portalUrl: 'https://automy.example.test');
     await container
         .read(appControllerProvider.notifier)
         .updateSettings(settings);
-    expect(repository.settings.apiUrl, 'https://api.example.test');
+    expect(repository.settings.portalUrl, 'https://automy.example.test');
     expect(container.read(appControllerProvider).settings.demoMode, isFalse);
     expect(
       await container.read(appControllerProvider.notifier).startExecution(),
