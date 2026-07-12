@@ -36,11 +36,11 @@ Future<ProviderContainer> pumpInspector(
 }
 
 void main() {
-  testWidgets('Inspector Web muestra diagnóstico vacío y URL ausente', (
+  testWidgets('Validación Automy muestra diagnóstico vacío y URL ausente', (
     tester,
   ) async {
     await pumpInspector(tester);
-    expect(find.text('Inspector Web'), findsOneWidget);
+    expect(find.text('Validación Automy'), findsOneWidget);
     expect(find.text('Sin abrir'), findsOneWidget);
     expect(find.text('Sin host'), findsOneWidget);
     await tester.drag(
@@ -101,7 +101,7 @@ void main() {
     ('tableta', const Size(900, 1200), 1),
     ('landscape', const Size(844, 390), 1),
   ]) {
-    testWidgets('Inspector Web sin overflow en ${configuration.$1}', (
+    testWidgets('Validación Automy sin overflow en ${configuration.$1}', (
       tester,
     ) async {
       await pumpInspector(

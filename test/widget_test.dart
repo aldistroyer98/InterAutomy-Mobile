@@ -240,7 +240,7 @@ void main() {
     expect(find.byKey(const Key('open-web-inspector')), findsOneWidget);
     await tester.tap(find.byKey(const Key('open-web-inspector')));
     await tester.pumpAndSettle();
-    expect(find.text('Inspector Web'), findsOneWidget);
+    expect(find.text('Validación Automy'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
