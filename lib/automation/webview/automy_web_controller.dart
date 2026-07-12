@@ -3,6 +3,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/security/webview_security_policy.dart';
 import '../engine/automation_exception.dart';
+import '../logging/automation_log_sanitizer.dart';
+import '../diagnostics/diagnostic_models.dart';
 import 'portal_diagnostics.dart';
 
 /// Mantiene el WebView fuera de las pantallas y exige la política de origen.
@@ -85,7 +87,23 @@ final class AutomyWebController {
   }
 
   void webError(String description) {
-    diagnostics.value = diagnostics.value.copyWith(lastError: description);
+    diagnostics.value = diagnostics.value.copyWith(
+      lastError: AutomationLogSanitizer.sanitize(description),
+    );
+  }
+
+  void popupRequested() {
+    final current = diagnostics.value;
+    final popup = current.popup;
+    diagnostics.value = current.copyWith(
+      popup: PopupDetectionResult(
+        detected: true,
+        targetBlankCount: popup.targetBlankCount,
+        externalLinkCount: popup.externalLinkCount,
+        ssoLinkCount: popup.ssoLinkCount,
+      ),
+      lastStep: 'POPUP_DETECTED',
+    );
   }
 
   void updateDiagnostics(PortalDiagnostics diagnostics) {

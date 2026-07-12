@@ -16,6 +16,8 @@ final class LocalSettingsRepository
   static const _portalKey = 'settings.portal_url';
   static const _legacyApiKey = 'settings.api_url';
   static const _additionalHostsKey = 'settings.additional_allowed_hosts';
+  static const _developerModeKey = 'settings.developer_mode';
+  static const _diagnosticModeKey = 'settings.diagnostic_mode';
   static const _themeKey = 'settings.theme';
   static const _futureTokenKey = 'future_api_token';
 
@@ -38,6 +40,8 @@ final class LocalSettingsRepository
           defaultPortalUrl,
       additionalAllowedHosts:
           preferences.getStringList(_additionalHostsKey) ?? const [],
+      developerMode: preferences.getBool(_developerModeKey) ?? false,
+      diagnosticMode: preferences.getBool(_diagnosticModeKey) ?? false,
       theme: theme,
     );
   }
@@ -52,6 +56,8 @@ final class LocalSettingsRepository
         _additionalHostsKey,
         settings.additionalAllowedHosts,
       ),
+      preferences.setBool(_developerModeKey, settings.developerMode),
+      preferences.setBool(_diagnosticModeKey, settings.diagnosticMode),
       preferences.setString(_themeKey, settings.theme.name),
     ]);
   }

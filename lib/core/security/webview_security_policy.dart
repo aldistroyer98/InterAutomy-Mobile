@@ -36,7 +36,7 @@ final class WebViewSecurityPolicy {
         uri.userInfo.isNotEmpty) {
       return null;
     }
-    return uri.replace(fragment: '');
+    return uri.replace(query: '', fragment: '');
   }
 
   static String? _normalizeHost(String value) {
