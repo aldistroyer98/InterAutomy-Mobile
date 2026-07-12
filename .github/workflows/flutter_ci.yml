@@ -1,6 +1,7 @@
 name: Flutter CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -15,6 +16,7 @@ concurrency:
 
 jobs:
   quality:
+    name: Formato, pruebas y APK IA Flutter4
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
