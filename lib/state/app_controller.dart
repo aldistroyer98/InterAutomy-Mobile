@@ -11,6 +11,7 @@ import '../domain/entities/order.dart';
 import '../domain/entities/product.dart';
 import '../domain/services/comodato_resolver.dart';
 import '../domain/validators/order_validator.dart';
+import '../features/history/application/restore_mode.dart';
 import 'app_state.dart';
 import 'providers.dart';
 
@@ -241,6 +242,51 @@ final class AppController extends Notifier<AppState> {
     final current = state.execution;
     if (current == null || current.estado.isTerminal) return;
     await ref.read(automationGatewayProvider).cancel(current.id);
+  }
+
+  int restoreFromHistory(
+    HistoryRecord record, {
+    required RestoreMode mode,
+    String? lineName,
+  }) {
+    final incoming = record.products
+        .where(
+          (product) => lineName == null || product.linea.nombre == lineName,
+        )
+        .toList(growable: false);
+    if (incoming.isEmpty) return 0;
+
+    List<SelectedProduct> restored;
+    if (mode == RestoreMode.replace) {
+      restored = List.of(incoming);
+    } else {
+      restored = List.of(state.selectedProducts);
+      for (final product in incoming) {
+        final index = restored.indexWhere(
+          (current) => current.duplicateKey == product.duplicateKey,
+        );
+        if (index < 0) {
+          restored.add(product.copyWith(id: _uuid.v4()));
+        } else {
+          final current = restored[index];
+          restored[index] = current.copyWith(
+            cantidad: current.cantidad + product.cantidad,
+          );
+        }
+      }
+    }
+
+    final historicalClients = state.clients.where(
+      (item) => item.id == record.clientId,
+    );
+    state = state.copyWith(
+      selectedClient: historicalClients.isEmpty
+          ? state.selectedClient
+          : historicalClients.first,
+      selectedProducts: List.unmodifiable(restored),
+      clearError: true,
+    );
+    return incoming.length;
   }
 
   Future<void> updateSettings(AppSettings settings) async {
