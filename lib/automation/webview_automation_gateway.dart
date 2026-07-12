@@ -145,6 +145,7 @@ final class WebViewAutomationGateway implements AutomationGateway {
       value: value,
       framework: current.framework.name,
       isCancelled: () => _diagnosticCancelled,
+      selectorTimeout: _selectorTimeoutReader(),
     );
     _publishProbe(result.probe, result.message);
     _logDiagnostic(
@@ -393,6 +394,7 @@ final class WebViewAutomationGateway implements AutomationGateway {
         value: orderNumber,
         framework: diagnostics.framework.name,
         isCancelled: () => context.cancelled,
+        selectorTimeout: _selectorTimeoutReader(),
       );
       if (!result.success) {
         yield _fail(active, result.code, result.message);

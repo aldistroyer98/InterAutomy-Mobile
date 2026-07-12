@@ -70,9 +70,12 @@ class _PortalScreenState extends ConsumerState<PortalScreen>
               );
             }
           },
-          onHttpError: (error) => _gateway.webController.webError(
-            'HTTP ${error.response?.statusCode ?? 'desconocido'}',
-          ),
+          onHttpError: (error) {
+            final message =
+                'HTTP ${error.response?.statusCode ?? 'desconocido'}';
+            _gateway.webController.webError(message);
+            _gateway.recordNetworkError('http', message);
+          },
           onSslAuthError: (error) {
             unawaited(error.cancel());
             _gateway.webController.webError('Error SSL; conexión cancelada.');
@@ -189,7 +192,7 @@ class _PortalScreenState extends ConsumerState<PortalScreen>
       return;
     }
     if (!mounted) return;
-    final approved = await showDialog<bool>(
+    final decision = await showDialog<_ExternalNavigationDecision>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Popup externo bloqueado'),
@@ -198,17 +201,26 @@ class _PortalScreenState extends ConsumerState<PortalScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () =>
+                Navigator.pop(context, _ExternalNavigationDecision.cancel),
             child: const Text('Cancelar'),
           ),
+          OutlinedButton(
+            onPressed: () =>
+                Navigator.pop(context, _ExternalNavigationDecision.authorize),
+            child: const Text('Autorizar host'),
+          ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () =>
+                Navigator.pop(context, _ExternalNavigationDecision.external),
             child: const Text('Abrir externamente'),
           ),
         ],
       ),
     );
-    if (approved == true) {
+    if (decision == _ExternalNavigationDecision.authorize) {
+      await _authorizeHost(uri);
+    } else if (decision == _ExternalNavigationDecision.external) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }

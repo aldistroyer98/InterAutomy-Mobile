@@ -32,12 +32,13 @@ final class NroOcAutomationService {
   }) async {
     final stopwatch = Stopwatch()..start();
     var attempts = 0;
+    JavascriptResult? lastResult;
     final definition = SelectorRegistry.byKey('purchaseOrderNumber');
     try {
       final result = await _waitManager.until(
         probe: () async {
           attempts += 1;
-          return _runner.run(
+          lastResult = await _runner.run(
             'selector_probe',
             payload: {
               'logicalKey': definition.key,
@@ -45,6 +46,7 @@ final class NroOcAutomationService {
               'version': definition.version,
             },
           );
+          return lastResult!;
         },
         matches: (value) =>
             (value.success &&
@@ -58,8 +60,14 @@ final class NroOcAutomationService {
       );
       return _probeFrom(result, stopwatch.elapsedMilliseconds, attempts - 1);
     } on AutomationException catch (error) {
+      final code =
+          error.code == 'WAIT_TIMEOUT' && lastResult?.data['visible'] == false
+          ? 'FIELD_NOT_VISIBLE'
+          : error.code == 'WAIT_TIMEOUT' && lastResult?.data['enabled'] == false
+          ? 'FIELD_DISABLED'
+          : error.code;
       return SelectorProbeResult(
-        code: error.code,
+        code: code,
         elapsedMilliseconds: stopwatch.elapsedMilliseconds,
         retries: attempts > 0 ? attempts - 1 : 0,
       );
@@ -70,7 +78,24 @@ final class NroOcAutomationService {
     required String value,
     required String framework,
     required bool Function() isCancelled,
+    Duration selectorTimeout = AppConfig.selectorTimeout,
   }) async {
+    final ready = await probe(
+      isCancelled: isCancelled,
+      timeout: selectorTimeout,
+    );
+    if (!ready.success) {
+      return NroOcAutomationResult(
+        success: false,
+        code: ready.code,
+        message: ready.code == 'FIELD_DISABLED'
+            ? 'El campo NRO OC permaneció deshabilitado.'
+            : ready.code == 'FIELD_NOT_VISIBLE'
+            ? 'El campo NRO OC permaneció oculto.'
+            : 'No se pudo preparar el campo NRO OC.',
+        probe: ready,
+      );
+    }
     final definition = SelectorRegistry.byKey('purchaseOrderNumber');
     final stopwatch = Stopwatch()..start();
     var attempts = 0;
