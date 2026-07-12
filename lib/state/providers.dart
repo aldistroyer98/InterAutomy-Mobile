@@ -40,6 +40,14 @@ final webViewAutomationGatewayProvider = Provider<WebViewAutomationGateway>((
   ref,
 ) {
   final gateway = WebViewAutomationGateway(
+    persistSessionReader: () =>
+        ref.read(appControllerProvider).settings.persistSession,
+    loadTimeoutReader: () => Duration(
+      seconds: ref.read(appControllerProvider).settings.loadTimeoutSeconds,
+    ),
+    selectorTimeoutReader: () => Duration(
+      seconds: ref.read(appControllerProvider).settings.selectorTimeoutSeconds,
+    ),
     policyReader: () {
       final settings = ref.read(appControllerProvider).settings;
       return WebViewSecurityPolicy(

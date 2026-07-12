@@ -3,6 +3,8 @@ package com.sistemasanaliticos.interautomy_mobile
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.os.Build
+import android.webkit.WebView
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -15,6 +17,7 @@ import io.flutter.plugin.common.MethodChannel
  */
 class MainActivity : FlutterActivity() {
     private val channelName = "interautomy/file_picker"
+    private val deviceInfoChannelName = "interautomy/device_info"
     private val requestCode = 4917
     private var pendingResult: MethodChannel.Result? = null
 
@@ -47,6 +50,28 @@ class MainActivity : FlutterActivity() {
                     addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
                 }
                 startActivityForResult(intent, requestCode)
+            }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, deviceInfoChannelName)
+            .setMethodCallHandler { call, result ->
+                if (call.method != "getRuntimeInfo") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                val webViewPackage = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WebView.getCurrentWebViewPackage()
+                } else {
+                    null
+                }
+                result.success(
+                    mapOf(
+                        "manufacturer" to Build.MANUFACTURER,
+                        "model" to Build.MODEL,
+                        "androidVersion" to Build.VERSION.RELEASE,
+                        "androidSdk" to Build.VERSION.SDK_INT,
+                        "webViewVersion" to (webViewPackage?.versionName ?: "unknown"),
+                        "webViewPackage" to (webViewPackage?.packageName ?: "unknown")
+                    )
+                )
             }
     }
 

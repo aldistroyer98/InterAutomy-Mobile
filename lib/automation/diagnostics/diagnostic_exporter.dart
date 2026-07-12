@@ -5,24 +5,44 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../app/app_config.dart';
+import '../navigation/navigation_diagnostic_event.dart';
+import '../session/session_validation_result.dart';
+import 'device_runtime_info.dart';
 import 'diagnostic_models.dart';
 
 final class DiagnosticExporter {
-  const DiagnosticExporter();
+  const DiagnosticExporter({
+    this.deviceInfo = const DeviceRuntimeInfoService(),
+  });
 
-  Future<String> export(WebDiagnosticSnapshot snapshot) async {
+  final DeviceRuntimeInfoService deviceInfo;
+
+  Future<String> export(
+    WebDiagnosticSnapshot snapshot, {
+    SessionValidationResult session = const SessionValidationResult(),
+    List<NavigationDiagnosticEvent> navigation = const [],
+  }) async {
     final directory = await getApplicationDocumentsDirectory();
     final now = DateTime.now();
     final stamp =
         '${_pad(now.year, 4)}${_pad(now.month)}${_pad(now.day)}_'
         '${_pad(now.hour)}${_pad(now.minute)}${_pad(now.second)}';
     final package = await PackageInfo.fromPlatform();
+    final runtime = await deviceInfo.read();
+    final sanitizedUri = Uri.tryParse(snapshot.sanitizedUrl);
     final payload = <String, Object?>{
       'appVersion': '${package.version}+${package.buildNumber}',
       'flutterVersion': '3.44.6',
-      'androidVersion': Platform.operatingSystemVersion,
+      'device': runtime.toJson(),
       'workflowVersion': AppConfig.workflowVersion,
       'selectorVersion': AppConfig.selectorVersion,
+      'scriptVersion': AppConfig.scriptVersion,
+      'host': snapshot.host,
+      'path': sanitizedUri?.path ?? '',
+      'session': session.toJson(),
+      'navigation': navigation
+          .map((event) => event.toJson())
+          .toList(growable: false),
       'diagnostic': snapshot.toJson(),
       'exportedAt': now.toUtc().toIso8601String(),
     };

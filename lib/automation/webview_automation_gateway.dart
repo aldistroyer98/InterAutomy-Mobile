@@ -12,7 +12,9 @@ import 'engine/automation_exception.dart';
 import 'javascript/javascript_runner.dart';
 import 'logging/automation_log_sanitizer.dart';
 import 'logging/diagnostic_log_entry.dart';
+import 'navigation/navigation_diagnostic_event.dart';
 import 'nro_oc/nro_oc_automation_service.dart';
+import 'session/session_validation_result.dart';
 import 'selectors/selector_registry.dart';
 import 'state/automation_state.dart';
 import 'state/automation_state_machine.dart';
@@ -31,11 +33,17 @@ final class WebViewAutomationGateway implements AutomationGateway {
     AutomyWebController? webController,
     WaitManager? waitManager,
     FilePickerService? filePicker,
+    bool Function()? persistSessionReader,
+    Duration Function()? loadTimeoutReader,
+    Duration Function()? selectorTimeoutReader,
   }) : this._(
          policyReader,
          webController ?? AutomyWebController(),
          waitManager ?? const WaitManager(),
          filePicker ?? FilePickerService(),
+         persistSessionReader ?? (() => true),
+         loadTimeoutReader ?? (() => const Duration(seconds: 45)),
+         selectorTimeoutReader ?? (() => const Duration(seconds: 12)),
        );
 
   WebViewAutomationGateway._(
@@ -43,6 +51,9 @@ final class WebViewAutomationGateway implements AutomationGateway {
     this.webController,
     this._waitManager,
     this._filePicker,
+    this._persistSessionReader,
+    this._loadTimeoutReader,
+    this._selectorTimeoutReader,
   ) {
     _javascript = JavascriptRunner(
       webController: webController,
@@ -57,6 +68,9 @@ final class WebViewAutomationGateway implements AutomationGateway {
   final AutomyWebController webController;
   final WaitManager _waitManager;
   final FilePickerService _filePicker;
+  final bool Function() _persistSessionReader;
+  final Duration Function() _loadTimeoutReader;
+  final Duration Function() _selectorTimeoutReader;
   late final JavascriptRunner _javascript;
   late final PageDetector _pageDetector;
   late final NroOcAutomationService _nroOc;
@@ -68,8 +82,12 @@ final class WebViewAutomationGateway implements AutomationGateway {
   final ValueNotifier<List<DiagnosticLogEntry>> diagnosticLog = ValueNotifier(
     const [],
   );
+  final ValueNotifier<List<NavigationDiagnosticEvent>> navigationLog =
+      ValueNotifier(const []);
 
   ValueNotifier<PortalDiagnostics> get diagnostics => webController.diagnostics;
+  ValueNotifier<SessionValidationResult> get sessionValidation =>
+      _sessionService.validation;
 
   Future<void> openConfiguredPortal() => webController
       .openPortal(_policyReader())
@@ -80,6 +98,10 @@ final class WebViewAutomationGateway implements AutomationGateway {
       webController.diagnostics.value,
     );
     webController.updateDiagnostics(inspection);
+    await _sessionService.observePage(
+      inspection.page,
+      persistSession: _persistSessionReader(),
+    );
     _logDiagnostic('Página detectada: ${inspection.page.name}');
     _logDiagnostic('Framework detectado: ${inspection.framework.name}');
     if (inspection.frames.total > 0) {
@@ -98,11 +120,14 @@ final class WebViewAutomationGateway implements AutomationGateway {
     final current = await refreshDiagnostics();
     if (current.frames.nroOcCrossOrigin) {
       return _publishProbe(
-        const SelectorProbeResult(code: 'IFRAME_CROSS_ORIGIN'),
+        const SelectorProbeResult(code: 'NRO_OC_CROSS_ORIGIN_IFRAME'),
         'NRO OC posiblemente dentro de iframe cross-origin',
       );
     }
-    final result = await _nroOc.probe(isCancelled: () => _diagnosticCancelled);
+    final result = await _nroOc.probe(
+      isCancelled: () => _diagnosticCancelled,
+      timeout: _selectorTimeoutReader(),
+    );
     return _publishProbe(
       result,
       result.success
@@ -136,6 +161,7 @@ final class WebViewAutomationGateway implements AutomationGateway {
     final result = await _nroOc.verify(
       value: value,
       framework: diagnostics.value.framework.name,
+      isCancelled: () => _diagnosticCancelled,
     );
     _publishProbe(result.probe, result.message);
     if (result.success) {
@@ -158,15 +184,94 @@ final class WebViewAutomationGateway implements AutomationGateway {
   void cancelNroOcTest() {
     _diagnosticCancelled = true;
     _logDiagnostic('Prueba cancelada');
+    _recordNavigation(
+      type: NavigationEventType.cancelled,
+      decision: 'cancelled',
+      reason: 'Prueba NRO OC cancelada por el usuario.',
+    );
   }
 
   Future<String> exportDiagnostics() async {
-    final path = await _exporter.export(diagnostics.value.toSnapshot());
+    final path = await _exporter.export(
+      diagnostics.value.toSnapshot(),
+      session: sessionValidation.value,
+      navigation: navigationLog.value,
+    );
     _logDiagnostic('Diagnóstico exportado');
     return path;
   }
 
-  Future<void> clearSession() => _sessionService.clearSession();
+  Future<void> clearSession() async {
+    await _sessionService.clearSession();
+    _logDiagnostic('Sesión y almacenamiento web limpiados');
+  }
+
+  void markLogoutVerified() {
+    _sessionService.markLogoutVerified();
+    _logDiagnostic('Logout verificado manualmente');
+  }
+
+  Future<void> portalClosed() async {
+    _sessionService.portalClosed();
+    cancelNroOcTest();
+    if (!_persistSessionReader()) await clearSession();
+  }
+
+  void appPaused() {
+    _sessionService.appPaused();
+    cancelNroOcTest();
+    _logDiagnostic('Aplicación en segundo plano; prueba pausada');
+  }
+
+  Future<void> appResumed() async {
+    _logDiagnostic('Aplicación reanudada; revalidación requerida');
+    if (webController.isBound && webController.mayRunJavaScript()) {
+      await refreshDiagnostics();
+    }
+  }
+
+  void recordNavigationDecision({
+    required Uri target,
+    required bool allowed,
+    required String reason,
+  }) {
+    final current = webController.currentUri;
+    _recordNavigation(
+      type: current == null
+          ? NavigationEventType.initial
+          : current.host == target.host && current.path == target.path
+          ? (allowed
+                ? NavigationEventType.allowed
+                : NavigationEventType.blocked)
+          : NavigationEventType.redirect,
+      decision: allowed ? 'allow' : 'block',
+      reason: reason,
+      from: current,
+      to: target,
+    );
+  }
+
+  void recordPageFinished(Uri? uri) => _recordNavigation(
+    type: NavigationEventType.pageFinished,
+    decision: 'loaded',
+    reason: 'Página principal terminó de cargar.',
+    to: uri,
+  );
+
+  void recordNetworkError(String type, String description) {
+    final eventType = switch (type) {
+      'ssl' => NavigationEventType.sslError,
+      'dns' => NavigationEventType.dnsError,
+      'timeout' => NavigationEventType.timeout,
+      _ => NavigationEventType.otherError,
+    };
+    _recordNavigation(
+      type: eventType,
+      decision: 'blocked',
+      reason: description,
+      to: webController.currentUri,
+    );
+  }
 
   Future<List<String>> pickFilesForWeb(dynamic params) =>
       _filePicker.pickForWeb(params);
@@ -218,7 +323,7 @@ final class WebViewAutomationGateway implements AutomationGateway {
         'Esperando que Automy termine de cargar.',
         .12,
       );
-      await _waitForKnownPage(active, const Duration(seconds: 45));
+      await _waitForKnownPage(active, _loadTimeoutReader());
 
       yield _transition(
         active,
@@ -504,9 +609,12 @@ final class WebViewAutomationGateway implements AutomationGateway {
       return _failure('NRO_OC_REQUIRED', 'Escribe un valor de prueba NRO OC.');
     }
     final current = await refreshDiagnostics();
+    if (!sessionValidation.value.sessionDetected) {
+      return _failure('SESSION_EXPIRED', 'No se detectó una sesión activa.');
+    }
     if (current.frames.nroOcCrossOrigin) {
       return _failure(
-        'IFRAME_CROSS_ORIGIN',
+        'CROSS_ORIGIN_IFRAME',
         'NRO OC puede estar en un iframe cross-origin.',
       );
     }
@@ -514,13 +622,13 @@ final class WebViewAutomationGateway implements AutomationGateway {
       return _failure(
         current.page == PortalPage.sessionExpired
             ? 'SESSION_EXPIRED'
-            : 'UNEXPECTED_PAGE',
+            : 'PAGE_NOT_SUPPORTED',
         'Navega manualmente al formulario reconocido antes de continuar.',
       );
     }
     if (!current.portalFingerprint.recognized) {
       return _failure(
-        'UNSUPPORTED_STRUCTURE',
+        'FINGERPRINT_MISMATCH',
         'Estructura no reconocida; la escritura fue detenida.',
       );
     }
@@ -558,8 +666,33 @@ final class WebViewAutomationGateway implements AutomationGateway {
     );
   }
 
+  void _recordNavigation({
+    required NavigationEventType type,
+    required String decision,
+    required String reason,
+    Uri? from,
+    Uri? to,
+  }) {
+    final event = NavigationDiagnosticEvent(
+      timestamp: DateTime.now(),
+      type: type,
+      decision: decision,
+      reason: AutomationLogSanitizer.sanitize(reason),
+      fromUrl: WebViewSecurityPolicy.displayUrl(from),
+      toUrl: WebViewSecurityPolicy.displayUrl(to),
+      fromHost: from?.host ?? '',
+      toHost: to?.host ?? '',
+    );
+    final entries = [...navigationLog.value, event];
+    navigationLog.value = List.unmodifiable(
+      entries.length > 100 ? entries.skip(entries.length - 100) : entries,
+    );
+  }
+
   void dispose() {
     diagnosticLog.dispose();
+    navigationLog.dispose();
+    _sessionService.dispose();
     webController.dispose();
   }
 }

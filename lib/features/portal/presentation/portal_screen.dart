@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,15 +21,18 @@ class PortalScreen extends ConsumerStatefulWidget {
   ConsumerState<PortalScreen> createState() => _PortalScreenState();
 }
 
-class _PortalScreenState extends ConsumerState<PortalScreen> {
+class _PortalScreenState extends ConsumerState<PortalScreen>
+    with WidgetsBindingObserver {
   late final WebViewAutomationGateway _gateway;
   late final WebViewController _controller;
   bool _ready = false;
   String? _setupError;
+  Timer? _loadTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _gateway = ref.read(webViewAutomationGatewayProvider);
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -38,9 +43,11 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: _onNavigationRequest,
-          onPageStarted: (url) => _gateway.webController.pageStarted(url),
+          onPageStarted: _onPageStarted,
           onPageFinished: (url) {
+            _loadTimer?.cancel();
             _gateway.webController.pageFinished(url);
+            _gateway.recordPageFinished(Uri.tryParse(url));
             _refreshDiagnosticsSilently();
           },
           onProgress: _gateway.webController.progressChanged,
@@ -52,11 +59,28 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
           onWebResourceError: (error) {
             if (error.isForMainFrame == true) {
               _gateway.webController.webError(error.description);
+              final type = error.errorType?.name ?? 'unknown';
+              _gateway.recordNetworkError(
+                type.contains('hostLookup')
+                    ? 'dns'
+                    : type.contains('timeout')
+                    ? 'timeout'
+                    : 'other',
+                error.description,
+              );
             }
           },
           onHttpError: (error) => _gateway.webController.webError(
             'HTTP ${error.response?.statusCode ?? 'desconocido'}',
           ),
+          onSslAuthError: (error) {
+            unawaited(error.cancel());
+            _gateway.webController.webError('Error SSL; conexión cancelada.');
+            _gateway.recordNetworkError(
+              'ssl',
+              'Error SSL; el certificado no fue ignorado.',
+            );
+          },
         ),
       );
     Future<void>.microtask(_configure);
@@ -67,10 +91,24 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
   ) async {
     final uri = Uri.tryParse(request.url);
     if (uri != null && _gateway.webController.mayNavigate(uri)) {
+      _gateway.recordNavigationDecision(
+        target: uri,
+        allowed: true,
+        reason: 'HTTPS y host incluido en la lista blanca.',
+      );
       return NavigationDecision.navigate;
     }
+    if (uri != null) {
+      _gateway.recordNavigationDecision(
+        target: uri,
+        allowed: false,
+        reason: uri.scheme == 'https'
+            ? 'Host no autorizado.'
+            : 'Esquema distinto de HTTPS.',
+      );
+    }
     if (mounted && uri != null && uri.scheme == 'https') {
-      final approved = await showDialog<bool>(
+      final decision = await showDialog<_ExternalNavigationDecision>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Enlace externo bloqueado'),
@@ -80,17 +118,26 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () =>
+                  Navigator.pop(context, _ExternalNavigationDecision.cancel),
               child: const Text('Cancelar'),
             ),
+            OutlinedButton(
+              onPressed: () =>
+                  Navigator.pop(context, _ExternalNavigationDecision.authorize),
+              child: const Text('Autorizar host'),
+            ),
             FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () =>
+                  Navigator.pop(context, _ExternalNavigationDecision.external),
               child: const Text('Abrir externamente'),
             ),
           ],
         ),
       );
-      if (approved == true) {
+      if (decision == _ExternalNavigationDecision.authorize) {
+        await _authorizeHost(uri);
+      } else if (decision == _ExternalNavigationDecision.external) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } else if (mounted) {
@@ -99,6 +146,38 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
       );
     }
     return NavigationDecision.prevent;
+  }
+
+  void _onPageStarted(String url) {
+    _loadTimer?.cancel();
+    _gateway.webController.pageStarted(url);
+    final seconds = ref.read(appControllerProvider).settings.loadTimeoutSeconds;
+    _loadTimer = Timer(Duration(seconds: seconds), () {
+      _gateway.webController.webError('Timeout de carga del portal.');
+      _gateway.recordNetworkError(
+        'timeout',
+        'La página superó el timeout configurado.',
+      );
+    });
+  }
+
+  Future<void> _authorizeHost(Uri uri) async {
+    final state = ref.read(appControllerProvider);
+    final hosts = {...state.settings.additionalAllowedHosts, uri.host}.toList()
+      ..sort();
+    final updated = state.settings.copyWith(additionalAllowedHosts: hosts);
+    await ref.read(appControllerProvider.notifier).updateSettings(updated);
+    final policy = WebViewSecurityPolicy(
+      portalUrl: WebViewSecurityPolicy.parsePortalUrl(updated.portalUrl),
+      additionalHosts: updated.additionalAllowedHosts,
+    );
+    _gateway.webController.bind(_controller, policy);
+    _gateway.recordNavigationDecision(
+      target: uri,
+      allowed: true,
+      reason: 'Host agregado manualmente por el usuario.',
+    );
+    await _controller.loadRequest(uri);
   }
 
   Future<void> _handlePopup(String rawUrl) async {
@@ -203,8 +282,21 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _loadTimer?.cancel();
+    unawaited(_gateway.portalClosed());
     _gateway.webController.unbind();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _gateway.appPaused();
+    } else if (state == AppLifecycleState.resumed) {
+      unawaited(_gateway.appResumed());
+    }
   }
 
   @override
@@ -267,7 +359,7 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
           if (settings.developerMode)
             IconButton(
               tooltip: 'Inspector Web',
-              onPressed: () => context.push('/inspector'),
+              onPressed: () => context.push('/validation'),
               icon: const Icon(Icons.monitor_heart_outlined),
             ),
           IconButton(
@@ -323,7 +415,7 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
                     if (settings.developerMode)
                       TextButton.icon(
                         key: const Key('portal-web-inspector'),
-                        onPressed: () => context.push('/inspector'),
+                        onPressed: () => context.push('/validation'),
                         icon: const Icon(Icons.troubleshoot_outlined),
                         label: const Text('Inspector'),
                       ),
@@ -337,6 +429,8 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
     );
   }
 }
+
+enum _ExternalNavigationDecision { cancel, authorize, external }
 
 extension on PortalPage {
   String get label => switch (this) {
