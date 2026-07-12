@@ -17,6 +17,7 @@ final class SelectorRegistry {
         'input[aria-label="NRO OC"]',
         'input[name="nro_oc"]',
         '#form_field_groups_nro_oc',
+        '@associated-label:nro-oc',
         'form [data-section="purchase-order"] input[type="text"]',
         '.nro-oc input',
       ],

@@ -1,7 +1,20 @@
 (function () {
   'use strict';
 
-  const VERSION = 'flutter4-js-1';
+  const VERSION = 'flutter5-js-1';
+
+  function associatedLabelControl(root) {
+    const labels = Array.from(root.querySelectorAll('label'));
+    for (const label of labels) {
+      const text = normalizedText(label.textContent || '');
+      if (!/\bnro\s*oc\b|orden de compra/.test(text)) continue;
+      const control = label.control ||
+        (label.htmlFor ? root.getElementById && root.getElementById(label.htmlFor) : null) ||
+        label.querySelector('input, textarea');
+      if (control) return control;
+    }
+    return null;
+  }
 
   function ok(code, message, data) {
     return { success: true, code: code, message: message, data: data || {} };
@@ -22,11 +35,51 @@
     const scope = root || document;
     for (let index = 0; index < (alternatives || []).length; index += 1) {
       try {
+        if (alternatives[index] === '@associated-label:nro-oc') {
+          const control = associatedLabelControl(scope);
+          if (control) return { element: control, alternativeIndex: index };
+          continue;
+        }
         const element = scope.querySelector(alternatives[index]);
         if (element) return { element: element, alternativeIndex: index };
       } catch (_) {
         // Un selector inválido se ignora sin exponerlo en la respuesta.
       }
+    }
+    return null;
+  }
+
+  function searchableRoots() {
+    const roots = [{ root: document, insideShadowDom: false, insideIframe: false }];
+    const queue = [document];
+    let visited = 0;
+    while (queue.length && visited < 1200) {
+      const root = queue.shift();
+      for (const node of root.querySelectorAll('*')) {
+        visited += 1;
+        if (node.shadowRoot) {
+          roots.push({ root: node.shadowRoot, insideShadowDom: true, insideIframe: false });
+          queue.push(node.shadowRoot);
+        }
+        if (visited >= 1200) break;
+      }
+    }
+    for (const frame of Array.from(document.querySelectorAll('iframe, frame')).slice(0, 20)) {
+      try {
+        if (frame.contentDocument) {
+          roots.push({ root: frame.contentDocument, insideShadowDom: false, insideIframe: true });
+        }
+      } catch (_) {
+        // Cross-origin: nunca se accede al documento.
+      }
+    }
+    return roots;
+  }
+
+  function findFirstSelectorAcrossRoots(alternatives) {
+    for (const context of searchableRoots()) {
+      const found = findFirstSelector(alternatives, context.root);
+      if (found) return Object.assign(found, context, { sameOrigin: true });
     }
     return null;
   }
@@ -45,9 +98,10 @@
   }
 
   function setNativeValue(element, value) {
-    const prototype = element instanceof HTMLTextAreaElement
-      ? HTMLTextAreaElement.prototype
-      : HTMLInputElement.prototype;
+    const ownerWindow = element.ownerDocument && element.ownerDocument.defaultView || window;
+    const prototype = String(element.tagName || '').toLocaleLowerCase() === 'textarea'
+      ? ownerWindow.HTMLTextAreaElement.prototype
+      : ownerWindow.HTMLInputElement.prototype;
     const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
     if (descriptor && descriptor.set) descriptor.set.call(element, value);
     else element.value = value;
@@ -121,6 +175,8 @@
     ok: ok,
     fail: fail,
     findFirstSelector: findFirstSelector,
+    findFirstSelectorAcrossRoots: findFirstSelectorAcrossRoots,
+    searchableRoots: searchableRoots,
     visible: visible,
     enabled: enabled,
     setNativeValue: setNativeValue,

@@ -228,6 +228,55 @@ final class PopupDetectionResult {
   };
 }
 
+final class SelectorAlternativeProbe {
+  const SelectorAlternativeProbe({
+    required this.index,
+    this.found = false,
+    this.visible = false,
+    this.enabled = false,
+    this.elementType = '',
+    this.tag = '',
+    this.sameOrigin = true,
+    this.insideShadowDom = false,
+    this.insideIframe = false,
+  });
+
+  final int index;
+  final bool found;
+  final bool visible;
+  final bool enabled;
+  final String elementType;
+  final String tag;
+  final bool sameOrigin;
+  final bool insideShadowDom;
+  final bool insideIframe;
+
+  factory SelectorAlternativeProbe.fromJson(Map<String, Object?> json) =>
+      SelectorAlternativeProbe(
+        index: _integer(json['index']),
+        found: json['found'] == true,
+        visible: json['visible'] == true,
+        enabled: json['enabled'] == true,
+        elementType: _safeText(json['elementType']),
+        tag: _safeText(json['tag']),
+        sameOrigin: json['sameOrigin'] != false,
+        insideShadowDom: json['insideShadowDom'] == true,
+        insideIframe: json['insideIframe'] == true,
+      );
+
+  Map<String, Object?> toJson() => {
+    'index': index,
+    'found': found,
+    'visible': visible,
+    'enabled': enabled,
+    'elementType': elementType,
+    'tag': tag,
+    'sameOrigin': sameOrigin,
+    'insideShadowDom': insideShadowDom,
+    'insideIframe': insideIframe,
+  };
+}
+
 final class SelectorProbeResult {
   const SelectorProbeResult({
     this.success = false,
@@ -238,6 +287,12 @@ final class SelectorProbeResult {
     this.enabled = false,
     this.elapsedMilliseconds = 0,
     this.retries = 0,
+    this.elementType = '',
+    this.tag = '',
+    this.sameOrigin = true,
+    this.insideShadowDom = false,
+    this.insideIframe = false,
+    this.alternatives = const [],
     this.version = AppConfig.selectorVersion,
   });
 
@@ -249,6 +304,12 @@ final class SelectorProbeResult {
   final bool enabled;
   final int elapsedMilliseconds;
   final int retries;
+  final String elementType;
+  final String tag;
+  final bool sameOrigin;
+  final bool insideShadowDom;
+  final bool insideIframe;
+  final List<SelectorAlternativeProbe> alternatives;
   final String version;
 
   factory SelectorProbeResult.fromJson(
@@ -264,6 +325,20 @@ final class SelectorProbeResult {
     enabled: json['enabled'] == true,
     elapsedMilliseconds: _integer(json['elapsedMilliseconds']),
     retries: _integer(json['retries']),
+    elementType: _safeText(json['elementType']),
+    tag: _safeText(json['tag']),
+    sameOrigin: json['sameOrigin'] != false,
+    insideShadowDom: json['insideShadowDom'] == true,
+    insideIframe: json['insideIframe'] == true,
+    alternatives: json['alternatives'] is List
+        ? List.unmodifiable(
+            (json['alternatives'] as List).whereType<Map>().map(
+              (item) => SelectorAlternativeProbe.fromJson(
+                item.map((key, value) => MapEntry(key.toString(), value)),
+              ),
+            ),
+          )
+        : const [],
     version: _safeText(json['version'], fallback: AppConfig.selectorVersion),
   );
 
@@ -276,6 +351,14 @@ final class SelectorProbeResult {
     'enabled': enabled,
     'elapsedMilliseconds': elapsedMilliseconds,
     'retries': retries,
+    'elementType': elementType,
+    'tag': tag,
+    'sameOrigin': sameOrigin,
+    'insideShadowDom': insideShadowDom,
+    'insideIframe': insideIframe,
+    'alternatives': alternatives
+        .map((alternative) => alternative.toJson())
+        .toList(growable: false),
     'version': version,
   };
 }

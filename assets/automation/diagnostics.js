@@ -12,7 +12,7 @@
     if (/error al procesar|ocurrio un error|fallo|rechazado/.test(bodyText)) pageSignals.push('error');
     if (/solicitud.{0,80}(enviada|registrada|completada)|pedido.{0,80}(registrado|enviado|completado)/.test(bodyText)) pageSignals.push('success');
     if (document.querySelector('[data-page="review"], [data-testid="review-page"]') || /revis(ar|ion).{0,80}(solicitud|pedido)/.test(bodyText)) pageSignals.push('review');
-    const nro = api.findFirstSelector(payload.nroOcAlternatives || []);
+    const nro = api.findFirstSelectorAcrossRoots(payload.nroOcAlternatives || []);
     if (nro) {
       selectorKeys.push('purchaseOrderNumber');
       pageSignals.push('clientForm');
