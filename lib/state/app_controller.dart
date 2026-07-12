@@ -5,9 +5,12 @@ import '../domain/entities/app_settings.dart';
 import '../domain/entities/client.dart';
 import '../domain/entities/commercial_line.dart';
 import '../domain/entities/comodato.dart';
+import '../domain/entities/execution.dart';
 import '../domain/entities/history_record.dart';
+import '../domain/entities/order.dart';
 import '../domain/entities/product.dart';
 import '../domain/services/comodato_resolver.dart';
+import '../domain/validators/order_validator.dart';
 import 'app_state.dart';
 import 'providers.dart';
 
@@ -172,6 +175,72 @@ final class AppController extends Notifier<AppState> {
         state.selectedProducts.where((item) => item.id != id),
       ),
     );
+  }
+
+  Future<List<String>> startExecution() async {
+    final client = state.selectedClient;
+    if (client == null) return const ['Selecciona un cliente válido.'];
+    final order = Order(
+      id: _uuid.v4(),
+      client: client,
+      products: List.unmodifiable(state.selectedProducts),
+      createdAt: DateTime.now(),
+    );
+    final issues = OrderValidator.validate(order);
+    if (issues.isNotEmpty) return issues;
+
+    state = state.copyWith(loading: true, clearError: true);
+    try {
+      await for (final execution
+          in ref.read(automationGatewayProvider).execute(order)) {
+        await ref.read(executionRepositoryProvider).save(execution);
+        state = state.copyWith(
+          execution: execution,
+          loading: false,
+          clearError: true,
+        );
+      }
+    } catch (error) {
+      state = state.copyWith(
+        loading: false,
+        errorMessage: 'La ejecución no pudo continuar: $error',
+      );
+    }
+    return const [];
+  }
+
+  Future<bool> confirmBrowserClosed() async {
+    final current = state.execution;
+    if (current == null) return false;
+    state = state.copyWith(loading: true, clearError: true);
+    try {
+      final completed = await ref
+          .read(automationGatewayProvider)
+          .confirmBrowserClosed(current.id);
+      await ref.read(executionRepositoryProvider).save(completed);
+      final record = HistoryRecord.fromExecution(completed);
+      await ref.read(historyRepositoryProvider).save(record);
+      final history = await ref.read(historyRepositoryProvider).search();
+      state = state.copyWith(
+        loading: false,
+        execution: completed,
+        history: history,
+        clearError: true,
+      );
+      return true;
+    } catch (error) {
+      state = state.copyWith(
+        loading: false,
+        errorMessage: 'No se pudo confirmar la ejecución: $error',
+      );
+      return false;
+    }
+  }
+
+  Future<void> cancelExecution() async {
+    final current = state.execution;
+    if (current == null || current.estado.isTerminal) return;
+    await ref.read(automationGatewayProvider).cancel(current.id);
   }
 
   Future<void> updateSettings(AppSettings settings) async {
