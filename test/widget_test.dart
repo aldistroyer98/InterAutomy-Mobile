@@ -4,14 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:interautomy_mobile/app/app.dart';
 import 'package:interautomy_mobile/data/demo/demo_automation_gateway.dart';
 import 'package:interautomy_mobile/data/demo/demo_seed.dart';
+import 'package:interautomy_mobile/domain/entities/app_settings.dart';
 import 'package:interautomy_mobile/state/app_controller.dart';
 import 'package:interautomy_mobile/state/providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'helpers/fake_settings_repository.dart';
 
 Future<ProviderContainer> pumpApp(
   WidgetTester tester, {
   Size size = const Size(390, 844),
+  FakeSettingsRepository? settingsRepository,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -19,7 +22,9 @@ Future<ProviderContainer> pumpApp(
   addTearDown(tester.view.resetDevicePixelRatio);
   final container = ProviderContainer(
     overrides: [
-      settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+      settingsRepositoryProvider.overrideWithValue(
+        settingsRepository ?? FakeSettingsRepository(),
+      ),
       automationGatewayProvider.overrideWithValue(
         DemoAutomationGateway(stepDuration: Duration.zero),
       ),
@@ -159,14 +164,55 @@ void main() {
   });
 
   testWidgets('tema se puede cambiar desde configuración', (tester) async {
-    final container = await pumpApp(tester);
+    SharedPreferences.setMockInitialValues({});
+    final container = await pumpApp(
+      tester,
+      settingsRepository: FakeSettingsRepository(
+        settings: const AppSettings(
+          demoMode: true,
+          portalUrl: '',
+          theme: AppThemePreference.system,
+        ),
+      ),
+    );
     await tester.tap(find.text('Ajustes'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Oscuro'));
-    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Oscuro'),
+      300,
+      scrollable: find.descendant(
+        of: find.byKey(const PageStorageKey('settings-scroll')),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              widget.axisDirection == AxisDirection.down,
+        ),
+      ),
+    );
     await tester.tap(find.text('Oscuro'));
     await tester.pumpAndSettle();
-    expect(container.read(appControllerProvider).settings.theme.name, 'dark');
+
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      ThemeMode.dark,
+    );
+    expect(
+      container.read(appControllerProvider).settings.theme,
+      AppThemePreference.dark,
+    );
+
+    await tester.tap(find.text('Claro'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      ThemeMode.light,
+    );
+    expect(
+      container.read(appControllerProvider).settings.theme,
+      AppThemePreference.light,
+    );
     expect(tester.takeException(), isNull);
   });
 }
