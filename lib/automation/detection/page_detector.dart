@@ -1,16 +1,23 @@
+import '../diagnostics/diagnostic_models.dart';
+import '../diagnostics/portal_fingerprint_builder.dart';
+import '../javascript/javascript_result.dart';
 import '../javascript/javascript_runner.dart';
+import '../selectors/selector_registry.dart';
 import '../webview/portal_diagnostics.dart';
 
 enum PortalPage {
   unknown,
   login,
   home,
+  processList,
   clientForm,
   productForm,
   review,
   success,
   error,
   sessionExpired,
+  blockedBySecurity,
+  unsupportedStructure,
 }
 
 final class PageDetector {
@@ -19,78 +26,125 @@ final class PageDetector {
   final JavascriptRunner _runner;
 
   Future<PortalDiagnostics> inspect(PortalDiagnostics previous) async {
-    final result = await _runner.run('diagnostics');
-    if (!result.success) {
-      return previous.copyWith(lastError: result.message);
+    final selector = SelectorRegistry.byKey('purchaseOrderNumber');
+    final payload = {
+      'nroOcAlternatives': selector.alternatives,
+      'selectorVersion': selector.version,
+    };
+    final results = await Future.wait([
+      _runner.run('diagnostics', payload: payload),
+      _runner.run('framework_detection', payload: payload),
+      _runner.run('iframe_detection', payload: payload),
+      _runner.run('shadow_dom_detection', payload: payload),
+    ]);
+    final diagnostic = results[0];
+    if (!diagnostic.success) {
+      return previous.copyWith(lastError: diagnostic.message);
     }
-    final data = result.data;
+    final data = diagnostic.data;
     final url = Uri.tryParse(data['url']?.toString() ?? '') ?? previous.url;
-    final title = data['title']?.toString().trim();
+    final title = _safeTitle(data['title']?.toString());
+    final structure = PageStructureSummary.fromJson(_map(data['structure']));
+    final framework = _framework(results[1]);
+    final frames = _frames(results[2]);
+    final shadowDom = _shadow(results[3]);
+    final storage = StorageAvailability.fromJson(_map(data['storage']));
+    final popup = PopupDetectionResult.fromJson(_map(data['popup']));
+    final signals = _strings(data['pageSignals']);
+    final selectorKeys = _strings(data['selectorKeys']);
+    final fingerprint = PortalFingerprintBuilder.build(
+      host: url?.host ?? '',
+      path: url?.path ?? '',
+      title: title,
+      selectorKeys: selectorKeys,
+      controlCount: structure.inputs + structure.selects + structure.buttons,
+      framework: framework.name,
+    );
     final page = detect(
       url: url,
-      title: title ?? previous.title,
-      hasPasswordInput: data['hasPasswordInput'] == true,
-      hasOrderNumber: data['hasOrderNumber'] == true,
-      hasCompleteButton: data['hasCompleteButton'] == true,
+      title: title,
+      signals: signals,
+      blockedBySecurity: false,
+      fingerprintRecognized: fingerprint.recognized,
     );
     return previous.copyWith(
+      timestamp: DateTime.now(),
       url: url,
-      title: title == null || title.isEmpty ? 'Sin título' : title,
+      title: title,
       javascriptAvailable: true,
-      cookiesAvailable: data['cookieEnabled'] == true,
-      iframeCount: _intValue(data['iframes']),
-      fileInputCount: _intValue(data['fileInputs']),
-      popupLinkCount: _intValue(data['popupLinks']),
+      framework: framework,
+      structure: structure,
+      frames: frames,
+      shadowDom: shadowDom,
+      storage: storage,
+      popup: popup,
+      portalFingerprint: fingerprint,
       page: page,
       engineVersion: _engineFromUserAgent(data['userAgent']?.toString()),
+      lastStep: 'DIAGNOSTIC_COMPLETED',
       clearError: true,
     );
   }
 
-  PortalPage detect({
+  static PortalPage detect({
     required Uri? url,
     required String title,
-    required bool hasPasswordInput,
-    required bool hasOrderNumber,
-    required bool hasCompleteButton,
+    required Iterable<String> signals,
+    required bool blockedBySecurity,
+    required bool fingerprintRecognized,
   }) {
-    final signal = '${url?.path ?? ''} $title'.toLowerCase();
-    if (hasPasswordInput ||
-        signal.contains('login') ||
-        signal.contains('iniciar sesión')) {
-      return PortalPage.login;
+    final found = signals.toSet();
+    final urlAndTitle = '${url?.path ?? ''} $title'.toLowerCase();
+    if (blockedBySecurity || found.contains('blockedBySecurity')) {
+      return PortalPage.blockedBySecurity;
     }
-    if (signal.contains('sesión expirada') ||
-        signal.contains('session expired')) {
+    if (found.contains('sessionExpired') ||
+        urlAndTitle.contains('session expired') ||
+        urlAndTitle.contains('sesión expirada')) {
       return PortalPage.sessionExpired;
     }
-    if (signal.contains('error')) {
-      return PortalPage.error;
+    if (found.contains('error')) return PortalPage.error;
+    if (found.contains('success')) return PortalPage.success;
+    if (found.contains('login') || urlAndTitle.contains('login')) {
+      return PortalPage.login;
     }
-    if (signal.contains('solicitud complet') ||
-        signal.contains('pedido enviado')) {
-      return PortalPage.success;
+    if (found.contains('review')) return PortalPage.review;
+    if (found.contains('clientForm')) {
+      return fingerprintRecognized
+          ? PortalPage.clientForm
+          : PortalPage.unsupportedStructure;
     }
-    if (hasOrderNumber || signal.contains('nro oc')) {
-      return PortalPage.clientForm;
-    }
-    if (hasCompleteButton) {
-      return PortalPage.review;
-    }
-    if (signal.contains('producto') || signal.contains('tabla de pedidos')) {
-      return PortalPage.productForm;
-    }
-    if (signal.contains('inicio') || signal.contains('procesos')) {
-      return PortalPage.home;
-    }
+    if (found.contains('processList')) return PortalPage.processList;
+    if (found.contains('home')) return PortalPage.home;
     return PortalPage.unknown;
   }
 
-  static int _intValue(Object? value) => switch (value) {
-    int value => value,
-    num value => value.toInt(),
-    _ => 0,
-  };
+  static FrameworkDetectionResult _framework(JavascriptResult result) =>
+      result.success
+      ? FrameworkDetectionResult.fromJson(result.data)
+      : const FrameworkDetectionResult();
+
+  static FrameSummary _frames(JavascriptResult result) => result.success
+      ? FrameSummary.fromJson(result.data)
+      : const FrameSummary();
+
+  static ShadowDomSummary _shadow(JavascriptResult result) => result.success
+      ? ShadowDomSummary.fromJson(result.data)
+      : const ShadowDomSummary();
+
+  static Map<String, Object?> _map(Object? value) => value is Map
+      ? value.map((key, value) => MapEntry(key.toString(), value))
+      : const {};
+
+  static List<String> _strings(Object? value) =>
+      value is List ? value.map((item) => item.toString()).toList() : const [];
+
+  static String _safeTitle(String? value) {
+    final title =
+        value?.replaceAll(RegExp(r'[\u0000-\u001f]'), '').trim() ?? '';
+    if (title.isEmpty) return 'Sin título';
+    return title.length <= 120 ? title : title.substring(0, 120);
+  }
 
   static String _engineFromUserAgent(String? value) {
     if (value == null || value.isEmpty) return 'WebView Android del sistema';

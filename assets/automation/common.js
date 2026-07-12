@@ -1,120 +1,138 @@
 (function () {
   'use strict';
 
-  function findFirstSelector(alternatives) {
-    for (const selector of alternatives || []) {
+  const VERSION = 'flutter4-js-1';
+
+  function ok(code, message, data) {
+    return { success: true, code: code, message: message, data: data || {} };
+  }
+
+  function fail(code, message, retryable, details) {
+    return {
+      success: false,
+      code: code,
+      message: message,
+      retryable: retryable === true,
+      details: details || {},
+      data: details || {}
+    };
+  }
+
+  function findFirstSelector(alternatives, root) {
+    const scope = root || document;
+    for (let index = 0; index < (alternatives || []).length; index += 1) {
       try {
-        const element = document.querySelector(selector);
-        if (element) return { element: element, selector: selector };
-      } catch (_) {}
+        const element = scope.querySelector(alternatives[index]);
+        if (element) return { element: element, alternativeIndex: index };
+      } catch (_) {
+        // Un selector inválido se ignora sin exponerlo en la respuesta.
+      }
     }
     return null;
   }
 
   function visible(element) {
-    if (!element) return false;
+    if (!element || !element.isConnected) return false;
     const style = window.getComputedStyle(element);
     const rect = element.getBoundingClientRect();
-    return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    return style.visibility !== 'hidden' && style.display !== 'none' &&
+      Number(style.opacity || 1) !== 0 && rect.width > 0 && rect.height > 0;
+  }
+
+  function enabled(element) {
+    return Boolean(element) && !element.disabled &&
+      element.getAttribute('aria-disabled') !== 'true' && !element.readOnly;
   }
 
   function setNativeValue(element, value) {
     const prototype = element instanceof HTMLTextAreaElement
       ? HTMLTextAreaElement.prototype
       : HTMLInputElement.prototype;
-    const setter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
-    if (setter) setter.call(element, value); else element.value = value;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+    if (descriptor && descriptor.set) descriptor.set.call(element, value);
+    else element.value = value;
   }
 
   function dispatchInputEvents(element) {
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-    element.dispatchEvent(new Event('change', { bubbles: true }));
-    element.dispatchEvent(new Event('blur', { bubbles: true }));
+    element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    element.dispatchEvent(new FocusEvent('blur', { bubbles: true, composed: true }));
   }
 
-  function clickElement(element) {
-    if (!visible(element) || element.disabled) return false;
-    element.scrollIntoView({ block: 'center', inline: 'nearest' });
-    element.click();
-    return true;
+  function readValue(element) {
+    return element && 'value' in element ? String(element.value || '') : '';
   }
 
-  function selectOption(element, value) {
-    if (!(element instanceof HTMLSelectElement)) return false;
-    const option = Array.from(element.options).find((item) => item.value === value || item.text === value);
-    if (!option) return false;
-    element.value = option.value;
-    dispatchInputEvents(element);
-    return element.value === option.value;
+  function sanitizedUrl(raw) {
+    try {
+      const url = new URL(raw, location.href);
+      if (url.protocol !== 'https:') return '';
+      return url.protocol + '//' + url.host + url.pathname;
+    } catch (_) {
+      return '';
+    }
   }
 
-  function readText(element) { return element ? (element.innerText || element.textContent || '').trim() : ''; }
-  function readValue(element) { return element && 'value' in element ? String(element.value || '') : ''; }
-
-  function waitForSelector(alternatives, timeoutMs) {
-    const timeout = timeoutMs || 10000;
-    return new Promise((resolve) => {
-      const found = findFirstSelector(alternatives);
-      if (found) return resolve(found.selector);
-      const observer = new MutationObserver(() => {
-        const next = findFirstSelector(alternatives);
-        if (next) { observer.disconnect(); resolve(next.selector); }
-      });
-      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
-      window.setTimeout(() => { observer.disconnect(); resolve(null); }, timeout);
-    });
+  function storageAvailable(name) {
+    try {
+      const storage = window[name];
+      if (!storage) return false;
+      const key = '__interautomy_probe__';
+      storage.setItem(key, '1');
+      storage.removeItem(key);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
-  function waitForDomIdle(idleMs) {
-    const quietFor = idleMs || 300;
-    return new Promise((resolve) => {
-      let timer = window.setTimeout(done, quietFor);
-      const observer = new MutationObserver(() => {
-        window.clearTimeout(timer);
-        timer = window.setTimeout(done, quietFor);
-      });
-      function done() { observer.disconnect(); resolve(true); }
-      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
-    });
+  function normalizedText(value) {
+    return String(value || '').toLocaleLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ').trim();
   }
 
-  function detectFramework() {
-    if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) return 'react';
-    if (window.ng || document.querySelector('[ng-version]')) return 'angular';
-    if (window.__VUE__ || document.querySelector('[data-v-app]')) return 'vue';
-    return 'unknown';
-  }
-
-  function observeMutations(callback) {
-    const observer = new MutationObserver((records) => callback(records.length));
-    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
-    return () => observer.disconnect();
-  }
-
-  function inspectPage(includeText) {
-    return {
-      url: location.href,
-      title: document.title || '',
-      iframes: document.querySelectorAll('iframe, frame').length,
-      fileInputs: document.querySelectorAll('input[type="file"]').length,
-      popupLinks: document.querySelectorAll('a[target="_blank"]').length,
-      hasPasswordInput: Boolean(document.querySelector('input[type="password"]')),
-      hasOrderNumber: Boolean(findFirstSelector(['#form_field_groups_nro_oc', 'input[name="nro_oc"]'])),
-      hasCompleteButton: Boolean(findFirstSelector(['button.ant-btn.ant-btn-primary.antd-pro-pages-applications-continue-style-complete', '[data-testid="complete-order"]'])),
-      text: includeText ? (document.body?.innerText || '').slice(0, 1200) : '',
-      cookieEnabled: navigator.cookieEnabled,
-      userAgent: navigator.userAgent.slice(0, 180),
-      framework: detectFramework()
+  if (!window.__interautomyOriginalOpen) {
+    window.__interautomyOriginalOpen = window.open;
+    window.open = function (rawUrl) {
+      const safeUrl = sanitizedUrl(rawUrl || '');
+      if (safeUrl && window.InterAutomyPopup &&
+          typeof window.InterAutomyPopup.postMessage === 'function') {
+        window.InterAutomyPopup.postMessage(safeUrl);
+      }
+      return null;
     };
   }
 
+  if (!window.__interautomyDomTracker && document.documentElement) {
+    window.__interautomyDomTracker = { lastMutationAt: Date.now(), count: 0 };
+    const trackerObserver = new MutationObserver(function (records) {
+      window.__interautomyDomTracker.lastMutationAt = Date.now();
+      window.__interautomyDomTracker.count += records.length;
+    });
+    trackerObserver.observe(document.documentElement, {
+      childList: true, subtree: true, attributes: true, characterData: true
+    });
+    window.__interautomyDomTracker.observer = trackerObserver;
+  }
+
   window.__interautomyAutomation = Object.freeze({
-    version: '1', findFirstSelector: findFirstSelector, visible: visible,
-    elementIsVisible: visible, setNativeValue: setNativeValue,
-    setInputValue: setNativeValue, dispatchInputEvents: dispatchInputEvents,
-    clickElement: clickElement, selectOption: selectOption, readText: readText,
-    readValue: readValue, waitForSelector: waitForSelector,
-    waitForDomIdle: waitForDomIdle, detectFramework: detectFramework,
-    observeMutations: observeMutations, inspectPage: inspectPage
+    version: VERSION,
+    ok: ok,
+    fail: fail,
+    findFirstSelector: findFirstSelector,
+    visible: visible,
+    enabled: enabled,
+    setNativeValue: setNativeValue,
+    dispatchInputEvents: dispatchInputEvents,
+    readValue: readValue,
+    sanitizedUrl: sanitizedUrl,
+    storageAvailable: storageAvailable,
+    normalizedText: normalizedText,
+    domStableForMs: function () {
+      return window.__interautomyDomTracker
+        ? Math.max(0, Date.now() - window.__interautomyDomTracker.lastMutationAt)
+        : 0;
+    }
   });
 })();
