@@ -46,7 +46,11 @@ final class NroOcAutomationService {
             },
           );
         },
-        matches: (value) => value.success || !value.retryable,
+        matches: (value) =>
+            (value.success &&
+                value.data['visible'] == true &&
+                value.data['enabled'] == true) ||
+            (!value.success && !value.retryable),
         timeout: timeout,
         isCancelled: isCancelled,
         timeoutMessage:
@@ -76,6 +80,8 @@ final class NroOcAutomationService {
       'version': definition.version,
       'value': value,
       'persistenceMs': 600,
+      'domStableMs': 350,
+      'secondPersistenceMs': 500,
       'controlledFramework': const {
         'react',
         'angular',
@@ -136,7 +142,57 @@ final class NroOcAutomationService {
   Future<NroOcAutomationResult> verify({
     required String value,
     required String framework,
-  }) => _operate('verify', value: value, framework: framework);
+    required bool Function() isCancelled,
+  }) async {
+    final definition = SelectorRegistry.byKey('purchaseOrderNumber');
+    final stopwatch = Stopwatch()..start();
+    var attempts = 0;
+    final payload = <String, Object?>{
+      'action': 'verify',
+      'logicalKey': definition.key,
+      'alternatives': definition.alternatives,
+      'version': definition.version,
+      'value': value,
+      'persistenceMs': 0,
+      'domStableMs': 350,
+      'secondPersistenceMs': 500,
+      'controlledFramework': const {
+        'react',
+        'angular',
+        'vue',
+        'nextjs',
+      }.contains(framework),
+    };
+    try {
+      final result = await _waitManager.until(
+        probe: () async {
+          attempts += 1;
+          return _runner.run('nro_oc', payload: payload);
+        },
+        matches: (result) => result.success || !result.retryable,
+        timeout: AppConfig.valuePersistenceTimeout,
+        isCancelled: isCancelled,
+        timeoutMessage: 'No se confirmó la segunda persistencia de NRO OC.',
+      );
+      return NroOcAutomationResult(
+        success: result.success,
+        code: result.code,
+        message: result.message,
+        probe: _probeFrom(result, stopwatch.elapsedMilliseconds, attempts - 1),
+      );
+    } on AutomationException catch (error) {
+      return NroOcAutomationResult(
+        success: false,
+        code: error.code,
+        message: error.message,
+        probe: SelectorProbeResult(
+          code: error.code,
+          elapsedMilliseconds: stopwatch.elapsedMilliseconds,
+          retries: attempts > 0 ? attempts - 1 : 0,
+        ),
+      );
+    }
+  }
 
   Future<NroOcAutomationResult> clear() => _operate('clear');
 
@@ -187,6 +243,20 @@ final class NroOcAutomationService {
     enabled: result.data['enabled'] == true || result.success,
     elapsedMilliseconds: elapsed,
     retries: retries < 0 ? 0 : retries,
+    elementType: result.data['elementType']?.toString() ?? '',
+    tag: result.data['tag']?.toString() ?? '',
+    sameOrigin: result.data['sameOrigin'] != false,
+    insideShadowDom: result.data['insideShadowDom'] == true,
+    insideIframe: result.data['insideIframe'] == true,
+    alternatives: result.data['alternatives'] is List
+        ? List.unmodifiable(
+            (result.data['alternatives'] as List).whereType<Map>().map(
+              (item) => SelectorAlternativeProbe.fromJson(
+                item.map((key, value) => MapEntry(key.toString(), value)),
+              ),
+            ),
+          )
+        : const [],
     version: AppConfig.selectorVersion,
   );
 }
