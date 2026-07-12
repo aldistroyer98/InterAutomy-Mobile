@@ -6,12 +6,13 @@ final class WebViewSessionService {
   WebViewSessionService(this._webController);
 
   final AutomyWebController _webController;
-  final WebViewCookieManager _cookieManager = WebViewCookieManager();
+  WebViewCookieManager? _cookieManager;
 
   /// No lee ni registra cookies: el estado se conserva de forma nativa.
   Future<void> clearSession() async {
+    final cookieManager = _cookieManager ??= WebViewCookieManager();
     await Future.wait([
-      _cookieManager.clearCookies(),
+      cookieManager.clearCookies(),
       _webController.clearLocalStorage(),
       _webController.clearCache(),
     ]);
