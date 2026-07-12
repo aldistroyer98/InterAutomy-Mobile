@@ -42,3 +42,11 @@ No se automatizan cliente completo, productos, comodatos, archivos ni envío. Ta
 ## Resultado esperado
 
 Una aplicación preparada para inspeccionar el portal y ejecutar una prueba trazable de NRO OC. Hasta completar la checklist Android con acceso autorizado, el resultado real se declara **pendiente**, nunca confirmado por inferencia.
+
+## Esperas y reintentos
+
+- Página/selector: polling cada 500 ms con `MutationObserver` local y timeout de 12 s para la prueba explícita.
+- Estabilidad DOM: tracker de mutaciones acotado; nunca se espera con un delay fijo como única señal.
+- Persistencia NRO OC: 3 s máximo, con verificación posterior a 600 ms y cancelación cooperativa.
+- Solo se reintentan selector pendiente, loading, DOM cambiante o campo temporalmente deshabilitado.
+- Dominio/SSL bloqueado, selector ausente, estructura incompatible, iframe cross-origin, cancelación y sesión expirada son definitivos.

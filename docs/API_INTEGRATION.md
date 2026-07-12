@@ -1,4 +1,6 @@
-# Integración de API
+# Integración de API (referencia heredada)
+
+> IA Flutter4 no requiere backend, FastAPI ni agente Windows. Este documento se conserva únicamente como referencia histórica y no describe el flujo operativo actual.
 
 ## Estado actual
 

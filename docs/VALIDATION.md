@@ -1,33 +1,38 @@
-# Validación IA Flutter3
+# Validación IA Flutter4
 
-Fecha de inicio: 12 de julio de 2026 (America/Lima).
+Fecha: 12 de julio de 2026 (America/Lima).
 
-## Línea base confirmada
+## Línea base
 
-- Proyecto móvil: `main`, `8b0fb34` (`IA Flutter2`), árbol limpio antes de
-  editar.
-- Referencia desktop analizada sin modificar: `e238e4788e40d96c7d3f2387dcc60d51123159b0` (`IA1`).
-- Dependencias WebView resueltas localmente: `webview_flutter 4.14.1` y
-  `webview_flutter_android 4.13.0`.
+- Proyecto: `C:\Users\user\Documents\Codex\InterAutomy-Mobile`.
+- Rama inicial: `main`.
+- Commit base local y remoto: `c5c24e317ad83996cef8b788b76c0bb56ebe51fb` (`IA Flutter3`).
+- Árbol inicial: limpio.
+- Developer Mode de Windows: activo.
+- Flutter `3.44.6`, Dart `3.12.2`, Android SDK `36.1.0` y licencias aceptadas.
+- No se detectó repositorio anidado.
 
-## Controles de esta iteración
+## Línea base IA Flutter3 ejecutada antes de editar
 
 | Control | Resultado |
 | --- | --- |
-| `dart format` | Ejecutado; el formateador no reportó cambios pendientes. |
-| `dart pub get --offline` | Dependencias resueltas; el sandbox impide actualizar telemetría fuera del workspace. |
-| `dart analyze` | Sin incidencias, ejecutado con el SDK Dart del entorno. |
-| `flutter test` | Pendiente de ejecución final por bloqueo externo del wrapper Flutter. |
-| APK / AAB | Pendientes de ejecución final por el mismo bloqueo del wrapper Flutter. |
-| Portal Automy real | No ejecutado: no se proporcionó URL ni acceso autorizado. |
+| `flutter clean` | Aprobado. |
+| `flutter pub get` | Aprobado. |
+| `dart format --output=none --set-exit-if-changed .` | Aprobado; 84 archivos, 0 cambios. |
+| `flutter analyze` | Aprobado; sin incidencias. |
+| `flutter test` | Aprobado; 30 pruebas. |
+| `flutter build apk --debug` | Aprobado; `build/app/outputs/flutter-apk/app-debug.apk`. |
 
-El bloqueo observado del wrapper `flutter --version` supera 60 segundos en esta
-sesión. El binario Dart del SDK funciona, por lo que permitió formato, resolución
-offline y análisis. No se inventan resultados de APK, AAB ni pruebas contra
-Automy real.
+## Entorno real disponible
 
-## Evidencia pendiente manual
+`flutter doctor -v` confirma Android toolchain. No hubo teléfono ni emulador Android conectado; solo Windows, Chrome y Edge. Por ello no se ejecutó Automy real.
 
-Seguir [WEBVIEW_TEST_PLAN.md](WEBVIEW_TEST_PLAN.md) con URL y cuenta de prueba
-autorizadas antes de habilitar selectores de cliente adicionales, productos,
-comodatos, importación o envío automático.
+## Declaración honesta
+
+- Login Automy real: **pendiente**.
+- Persistencia de sesión real: **pendiente**.
+- Detección de framework/iframes/Shadow DOM del portal real: **pendiente**.
+- Detección, escritura y verificación de NRO OC real: **pendiente**.
+- Infraestructura local, fixtures y compilación: se documentan con los resultados finales de esta iteración.
+
+Seguir [IA_FLUTTER4_ANDROID_CHECKLIST.md](IA_FLUTTER4_ANDROID_CHECKLIST.md) con acceso autorizado. No se habilita cliente completo, productos, archivos ni envío automático.

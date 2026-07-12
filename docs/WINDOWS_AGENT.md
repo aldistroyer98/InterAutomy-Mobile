@@ -1,4 +1,6 @@
-# Agente Windows
+# Agente Windows (obsoleto)
+
+> Este diseño heredado no forma parte de IA Flutter4. La arquitectura operativa es Android WebView autónomo, sin PC intermediaria, FastAPI, Selenium ni ChromeDriver.
 
 ## Responsabilidad
 
