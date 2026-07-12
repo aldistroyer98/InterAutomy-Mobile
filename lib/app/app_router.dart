@@ -6,6 +6,7 @@ import '../features/clients/presentation/clients_screen.dart';
 import '../features/execution/presentation/execution_screen.dart';
 import '../features/history/presentation/history_detail_screen.dart';
 import '../features/history/presentation/history_screen.dart';
+import '../features/inspector/presentation/web_inspector_screen.dart';
 import '../features/products/presentation/products_screen.dart';
 import '../features/portal/presentation/portal_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -18,6 +19,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/portal',
         builder: (context, state) => const PortalScreen(),
+      ),
+      GoRoute(
+        path: '/inspector',
+        builder: (context, state) => const WebInspectorScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

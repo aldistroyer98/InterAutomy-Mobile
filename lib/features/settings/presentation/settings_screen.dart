@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../app/app_config.dart';
@@ -57,7 +58,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<bool> _savePortal(AppSettings settings) async {
     if (!(_formKey.currentState?.validate() ?? false)) return false;
-    final portal = _portalController.text.trim();
+    final rawPortal = _portalController.text.trim();
+    final portal = rawPortal.isEmpty
+        ? ''
+        : WebViewSecurityPolicy.parsePortalUrl(rawPortal)!.toString();
     final hosts = WebViewSecurityPolicy.parseAdditionalHosts(
       _hostsController.text,
     )!;
@@ -131,17 +135,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Card(
-            child: SwitchListTile(
-              key: const Key('demo-mode-switch'),
-              secondary: const Icon(Icons.science_outlined),
-              title: const Text('Modo demostración'),
-              subtitle: Text(
-                settings.demoMode
-                    ? 'Usa clientes, catálogo y ejecución simulados en el dispositivo.'
-                    : 'Usa Automy dentro del WebView protegido de la aplicación.',
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Modo del portal',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<bool>(
+                    key: const Key('portal-mode-selector'),
+                    segments: const [
+                      ButtonSegment(
+                        value: true,
+                        icon: Icon(Icons.science_outlined),
+                        label: Text('Demo'),
+                      ),
+                      ButtonSegment(
+                        value: false,
+                        icon: Icon(Icons.web_outlined),
+                        label: Text('Automy WebView'),
+                      ),
+                    ],
+                    selected: {settings.demoMode},
+                    onSelectionChanged: (value) =>
+                        _toggleDemo(settings, value.first),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    settings.demoMode
+                        ? 'Clientes, catálogo y ejecución simulados en el dispositivo.'
+                        : 'Login, navegación y envío manuales dentro del WebView protegido.',
+                  ),
+                ],
               ),
-              value: settings.demoMode,
-              onChanged: (value) => _toggleDemo(settings, value),
             ),
           ),
           const SizedBox(height: 12),
@@ -210,6 +239,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onPressed: _clearSession,
                 child: const Text('Limpiar sesión'),
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  key: const Key('developer-mode-switch'),
+                  secondary: const Icon(Icons.developer_mode_outlined),
+                  title: const Text('Modo desarrollador'),
+                  subtitle: const Text(
+                    'Habilita Inspector Web y la prueba manual de NRO OC.',
+                  ),
+                  value: settings.developerMode,
+                  onChanged: (value) => ref
+                      .read(appControllerProvider.notifier)
+                      .updateSettings(
+                        settings.copyWith(
+                          developerMode: value,
+                          diagnosticMode: value
+                              ? settings.diagnosticMode
+                              : false,
+                        ),
+                      ),
+                ),
+                if (settings.developerMode) ...[
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    key: const Key('diagnostic-mode-switch'),
+                    secondary: const Icon(Icons.monitor_heart_outlined),
+                    title: const Text('Modo diagnóstico'),
+                    subtitle: const Text(
+                      'Muestra señales técnicas sanitizadas del portal.',
+                    ),
+                    value: settings.diagnosticMode,
+                    onChanged: (value) => ref
+                        .read(appControllerProvider.notifier)
+                        .updateSettings(
+                          settings.copyWith(diagnosticMode: value),
+                        ),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    key: const Key('open-web-inspector'),
+                    leading: const Icon(Icons.troubleshoot_outlined),
+                    title: const Text('Inspector Web'),
+                    subtitle: const Text(
+                      'Disponible con el portal abierto para diagnóstico y NRO OC.',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/inspector'),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: 12),

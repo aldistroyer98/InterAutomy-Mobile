@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
-import '../../../app/app_config.dart';
 import '../../../automation/detection/page_detector.dart';
 import '../../../automation/webview/portal_diagnostics.dart';
 import '../../../automation/webview_automation_gateway.dart';
 import '../../../core/security/webview_security_policy.dart';
-import '../../../domain/entities/execution.dart';
 import '../../../state/app_controller.dart';
 import '../../../state/providers.dart';
 
@@ -32,6 +31,10 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
     _gateway = ref.read(webViewAutomationGatewayProvider);
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..addJavaScriptChannel(
+        'InterAutomyPopup',
+        onMessageReceived: (message) => _handlePopup(message.message),
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: _onNavigationRequest,
@@ -66,16 +69,69 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
     if (uri != null && _gateway.webController.mayNavigate(uri)) {
       return NavigationDecision.navigate;
     }
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+    if (mounted && uri != null && uri.scheme == 'https') {
+      final approved = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Enlace externo bloqueado'),
           content: Text(
-            'Enlace bloqueado: el host no está autorizado para Automy.',
+            'El host ${uri.host} no está autorizado para automatización. '
+            '¿Deseas abrirlo fuera de InterAutomy?',
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Abrir externamente'),
+            ),
+          ],
         ),
+      );
+      if (approved == true) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Navegación insegura bloqueada.')),
       );
     }
     return NavigationDecision.prevent;
+  }
+
+  Future<void> _handlePopup(String rawUrl) async {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri == null || uri.scheme != 'https') return;
+    _gateway.webController.popupRequested();
+    if (_gateway.webController.mayNavigate(uri)) {
+      await _controller.loadRequest(uri);
+      return;
+    }
+    if (!mounted) return;
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Popup externo bloqueado'),
+        content: Text(
+          'El host ${uri.host} no está autorizado. ¿Deseas abrirlo externamente?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Abrir externamente'),
+          ),
+        ],
+      ),
+    );
+    if (approved == true) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _configure() async {
@@ -108,37 +164,13 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
     }
   }
 
-  Future<void> _openDiagnostics() async {
-    try {
-      await _gateway.refreshDiagnostics();
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('No se pudo actualizar el diagnóstico: $error'),
-          ),
-        );
-      }
-    }
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => ValueListenableBuilder<PortalDiagnostics>(
-        valueListenable: _gateway.diagnostics,
-        builder: (context, data, _) => _DiagnosticSheet(data: data),
-      ),
-    );
-  }
-
   Future<void> _showLog() async {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (context) => Consumer(
-        builder: (context, ref, _) {
-          final entries =
-              ref.watch(appControllerProvider).execution?.bitacora ?? const [];
+      builder: (context) => ValueListenableBuilder(
+        valueListenable: _gateway.diagnosticLog,
+        builder: (context, entries, _) {
           return SafeArea(
             top: false,
             child: ListView(
@@ -153,7 +185,7 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
                     (entry) => ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.circle_outlined, size: 18),
-                      title: Text(entry.message),
+                      title: Text(entry.event),
                       subtitle: Text(entry.timestamp.toLocal().toString()),
                     ),
                   ),
@@ -167,42 +199,6 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
 
   Future<void> _goBack() async {
     if (await _controller.canGoBack()) await _controller.goBack();
-  }
-
-  Future<void> _prepareOrder() async {
-    final issues = await ref
-        .read(appControllerProvider.notifier)
-        .startExecution();
-    if (!mounted || issues.isEmpty) return;
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Validación requerida'),
-        content: Text(issues.join('\n')),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Entendido'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _checkResult() async {
-    final confirmed = await ref
-        .read(appControllerProvider.notifier)
-        .confirmBrowserClosed();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          confirmed
-              ? 'Producto enviado.'
-              : 'Resultado no confirmado; continúe la revisión.',
-        ),
-      ),
-    );
   }
 
   @override
@@ -241,7 +237,6 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
         ),
       );
     }
-    final execution = appState.execution;
     return Scaffold(
       appBar: AppBar(
         title: ValueListenableBuilder<PortalDiagnostics>(
@@ -269,11 +264,12 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
             onPressed: _controller.reload,
             icon: const Icon(Icons.refresh),
           ),
-          IconButton(
-            tooltip: 'Diagnóstico',
-            onPressed: _openDiagnostics,
-            icon: const Icon(Icons.monitor_heart_outlined),
-          ),
+          if (settings.developerMode)
+            IconButton(
+              tooltip: 'Inspector Web',
+              onPressed: () => context.push('/inspector'),
+              icon: const Icon(Icons.monitor_heart_outlined),
+            ),
           IconButton(
             tooltip: 'Bitácora',
             onPressed: _showLog,
@@ -313,13 +309,27 @@ class _PortalScreenState extends ConsumerState<PortalScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : WebViewWidget(controller: _controller),
             ),
-            _ReviewPanel(
-              execution: execution,
-              allowAutomaticSubmission: AppConfig.allowAutomaticSubmission,
-              onPrepare: _prepareOrder,
-              onCancel: () =>
-                  ref.read(appControllerProvider.notifier).cancelExecution(),
-              onCheckResult: _checkResult,
+            Material(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Login, navegación y envío son manuales. La app no envía pedidos.',
+                      ),
+                    ),
+                    if (settings.developerMode)
+                      TextButton.icon(
+                        key: const Key('portal-web-inspector'),
+                        onPressed: () => context.push('/inspector'),
+                        icon: const Icon(Icons.troubleshoot_outlined),
+                        label: const Text('Inspector'),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -333,139 +343,14 @@ extension on PortalPage {
     PortalPage.unknown => 'Automy',
     PortalPage.login => 'Inicio de sesión',
     PortalPage.home => 'Inicio',
+    PortalPage.processList => 'Lista de procesos',
     PortalPage.clientForm => 'Formulario de cliente',
     PortalPage.productForm => 'Formulario de productos',
     PortalPage.review => 'Revisión',
     PortalPage.success => 'Resultado',
     PortalPage.error => 'Error de portal',
     PortalPage.sessionExpired => 'Sesión expirada',
+    PortalPage.blockedBySecurity => 'Bloqueado por seguridad',
+    PortalPage.unsupportedStructure => 'Estructura no reconocida',
   };
-}
-
-class _ReviewPanel extends StatelessWidget {
-  const _ReviewPanel({
-    required this.execution,
-    required this.allowAutomaticSubmission,
-    required this.onPrepare,
-    required this.onCancel,
-    required this.onCheckResult,
-  });
-
-  final Execution? execution;
-  final bool allowAutomaticSubmission;
-  final VoidCallback onPrepare;
-  final VoidCallback onCancel;
-  final VoidCallback onCheckResult;
-
-  @override
-  Widget build(BuildContext context) {
-    final waitingReview = execution?.estado == ExecutionStatus.waitingForReview;
-    final running =
-        execution != null && !execution!.estado.isTerminal && !waitingReview;
-    return Material(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (execution != null) ...[
-              Text(execution!.estado.label),
-              const SizedBox(height: 4),
-              LinearProgressIndicator(value: execution!.progreso),
-              const SizedBox(height: 8),
-            ],
-            if (waitingReview)
-              const Text('Revise toda la información con paciencia y detalle.'),
-            Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (running)
-                  OutlinedButton.icon(
-                    onPressed: onCancel,
-                    icon: const Icon(Icons.cancel_outlined),
-                    label: const Text('Cancelar'),
-                  ),
-                if (waitingReview)
-                  OutlinedButton.icon(
-                    onPressed: onCheckResult,
-                    icon: const Icon(Icons.fact_check_outlined),
-                    label: const Text('Detectar resultado'),
-                  ),
-                FilledButton.icon(
-                  onPressed: running ? null : onPrepare,
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Preparar pedido'),
-                ),
-              ],
-            ),
-            if (!allowAutomaticSubmission)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text(
-                  'El envío automático está desactivado. Confirme el envío dentro de Automy.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DiagnosticSheet extends StatelessWidget {
-  const _DiagnosticSheet({required this.data});
-
-  final PortalDiagnostics data;
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = <(String, String)>[
-      ('URL', WebViewSecurityPolicy.displayUrl(data.url)),
-      ('Host', data.host),
-      ('Título', data.title),
-      ('Carga', '${data.loadingProgress}%'),
-      ('JavaScript', data.javascriptAvailable ? 'Activo' : 'Sin confirmar'),
-      (
-        'Cookies',
-        data.cookiesAvailable ? 'Disponibles para el portal' : 'Sin confirmar',
-      ),
-      ('Iframes', '${data.iframeCount}'),
-      ('Solicitudes de archivo', '${data.fileInputCount}'),
-      ('Posibles popups', '${data.popupLinkCount}'),
-      ('Página detectada', data.page.label),
-      ('Fingerprint', '${AppConfig.fingerprintVersion}:${data.fingerprint}'),
-      ('Motor', data.engineVersion),
-      ('Versión de selectores', AppConfig.selectorVersion),
-      ('Último error', data.lastError ?? 'Ninguno'),
-    ];
-    return SafeArea(
-      top: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        children: [
-          Text(
-            'Diagnóstico protegido',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'No se muestran cookies, credenciales, tokens ni contenido de formularios.',
-          ),
-          const SizedBox(height: 12),
-          ...rows.map(
-            (row) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(row.$1),
-              subtitle: Text(row.$2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
