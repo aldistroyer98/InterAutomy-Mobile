@@ -179,9 +179,9 @@ final class AppController extends Notifier<AppState> {
   }
 
   Future<List<String>> startExecution() async {
-    if (!state.settings.demoMode) {
+    if (!state.settings.demoMode && !state.settings.hasPortalConfiguration) {
       return const [
-        'La ejecución remota todavía no está habilitada. Activa el modo demostración.',
+        'Configura la URL HTTPS de Automy antes de usar el modo WebView.',
       ];
     }
     final client = state.selectedClient;
@@ -200,8 +200,12 @@ final class AppController extends Notifier<AppState> {
       await for (final execution
           in ref.read(automationGatewayProvider).execute(order)) {
         await ref.read(executionRepositoryProvider).save(execution);
+        final history = execution.estado == ExecutionStatus.completed
+            ? await _saveCompletedExecution(execution)
+            : state.history;
         state = state.copyWith(
           execution: execution,
+          history: history,
           loading: false,
           clearError: true,
         );
@@ -224,9 +228,9 @@ final class AppController extends Notifier<AppState> {
           .read(automationGatewayProvider)
           .confirmBrowserClosed(current.id);
       await ref.read(executionRepositoryProvider).save(completed);
-      final record = HistoryRecord.fromExecution(completed);
-      await ref.read(historyRepositoryProvider).save(record);
-      final history = await ref.read(historyRepositoryProvider).search();
+      final history = completed.estado == ExecutionStatus.completed
+          ? await _saveCompletedExecution(completed)
+          : state.history;
       state = state.copyWith(
         loading: false,
         execution: completed,
@@ -241,6 +245,14 @@ final class AppController extends Notifier<AppState> {
       );
       return false;
     }
+  }
+
+  Future<List<HistoryRecord>> _saveCompletedExecution(
+    Execution completed,
+  ) async {
+    final record = HistoryRecord.fromExecution(completed);
+    await ref.read(historyRepositoryProvider).save(record);
+    return ref.read(historyRepositoryProvider).search();
   }
 
   Future<void> cancelExecution() async {

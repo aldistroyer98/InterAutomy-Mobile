@@ -11,21 +11,28 @@ extension AppThemePreferenceLabel on AppThemePreference {
 final class AppSettings {
   const AppSettings({
     required this.demoMode,
-    required this.apiUrl,
+    required this.portalUrl,
+    this.additionalAllowedHosts = const [],
     required this.theme,
   });
 
   final bool demoMode;
-  final String apiUrl;
+  final String portalUrl;
+  final List<String> additionalAllowedHosts;
   final AppThemePreference theme;
+
+  bool get hasPortalConfiguration => portalUrl.trim().isNotEmpty;
 
   AppSettings copyWith({
     bool? demoMode,
-    String? apiUrl,
+    String? portalUrl,
+    List<String>? additionalAllowedHosts,
     AppThemePreference? theme,
   }) => AppSettings(
     demoMode: demoMode ?? this.demoMode,
-    apiUrl: apiUrl ?? this.apiUrl,
+    portalUrl: portalUrl ?? this.portalUrl,
+    additionalAllowedHosts:
+        additionalAllowedHosts ?? this.additionalAllowedHosts,
     theme: theme ?? this.theme,
   );
 }

@@ -19,7 +19,7 @@ final class AppState {
     this.history = const [],
     this.settings = const AppSettings(
       demoMode: true,
-      apiUrl: AppConfig.defaultApiUrl,
+      portalUrl: AppConfig.defaultPortalUrl,
       theme: AppThemePreference.system,
     ),
     this.errorMessage,

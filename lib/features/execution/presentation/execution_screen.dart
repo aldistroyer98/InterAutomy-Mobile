@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../domain/entities/execution.dart';
@@ -9,6 +10,36 @@ class ExecutionScreen extends ConsumerWidget {
   const ExecutionScreen({super.key});
 
   Future<void> _execute(BuildContext context, WidgetRef ref) async {
+    final currentState = ref.read(appControllerProvider);
+    if (!currentState.settings.demoMode) {
+      if (!currentState.settings.hasPortalConfiguration) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Configura Automy'),
+            content: const Text(
+              'Guarda una URL HTTPS de Automy en Ajustes antes de abrir el navegador integrado.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  context.go('/settings');
+                },
+                child: const Text('Ir a ajustes'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      context.push('/portal');
+      return;
+    }
     final issues = await ref
         .read(appControllerProvider.notifier)
         .startExecution();

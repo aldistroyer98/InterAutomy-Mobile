@@ -8,16 +8,18 @@ import '../../domain/repositories/settings_repository.dart';
 final class LocalSettingsRepository
     implements SettingsRepository, ApiConfigurationRepository {
   LocalSettingsRepository({
-    required this.defaultApiUrl,
+    required this.defaultPortalUrl,
     FlutterSecureStorage? secureStorage,
   }) : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const _demoKey = 'settings.demo_mode';
-  static const _apiKey = 'settings.api_url';
+  static const _portalKey = 'settings.portal_url';
+  static const _legacyApiKey = 'settings.api_url';
+  static const _additionalHostsKey = 'settings.additional_allowed_hosts';
   static const _themeKey = 'settings.theme';
   static const _futureTokenKey = 'future_api_token';
 
-  final String defaultApiUrl;
+  final String defaultPortalUrl;
   final FlutterSecureStorage _secureStorage;
 
   @override
@@ -30,7 +32,12 @@ final class LocalSettingsRepository
     );
     return AppSettings(
       demoMode: preferences.getBool(_demoKey) ?? true,
-      apiUrl: preferences.getString(_apiKey) ?? defaultApiUrl,
+      portalUrl:
+          preferences.getString(_portalKey) ??
+          preferences.getString(_legacyApiKey) ??
+          defaultPortalUrl,
+      additionalAllowedHosts:
+          preferences.getStringList(_additionalHostsKey) ?? const [],
       theme: theme,
     );
   }
@@ -40,18 +47,22 @@ final class LocalSettingsRepository
     final preferences = await SharedPreferences.getInstance();
     await Future.wait([
       preferences.setBool(_demoKey, settings.demoMode),
-      preferences.setString(_apiKey, settings.apiUrl),
+      preferences.setString(_portalKey, settings.portalUrl),
+      preferences.setStringList(
+        _additionalHostsKey,
+        settings.additionalAllowedHosts,
+      ),
       preferences.setString(_themeKey, settings.theme.name),
     ]);
   }
 
   @override
-  Future<String> getBaseUrl() async => (await load()).apiUrl;
+  Future<String> getBaseUrl() async => (await load()).portalUrl;
 
   @override
   Future<void> setBaseUrl(String value) async {
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_apiKey, value);
+    await preferences.setString(_portalKey, value);
   }
 
   @override

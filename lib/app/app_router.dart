@@ -7,6 +7,7 @@ import '../features/execution/presentation/execution_screen.dart';
 import '../features/history/presentation/history_detail_screen.dart';
 import '../features/history/presentation/history_screen.dart';
 import '../features/products/presentation/products_screen.dart';
+import '../features/portal/presentation/portal_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -14,6 +15,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/clients',
     routes: [
       GoRoute(path: '/', redirect: (context, state) => '/clients'),
+      GoRoute(
+        path: '/portal',
+        builder: (context, state) => const PortalScreen(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             ResponsiveNavigationShell(navigationShell: navigationShell),
