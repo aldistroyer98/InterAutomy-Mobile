@@ -2,6 +2,7 @@ import '../diagnostics/diagnostic_models.dart';
 import '../diagnostics/portal_fingerprint_builder.dart';
 import '../javascript/javascript_result.dart';
 import '../javascript/javascript_runner.dart';
+import '../logging/automation_log_sanitizer.dart';
 import '../selectors/selector_registry.dart';
 import '../webview/portal_diagnostics.dart';
 
@@ -140,8 +141,9 @@ final class PageDetector {
       value is List ? value.map((item) => item.toString()).toList() : const [];
 
   static String _safeTitle(String? value) {
-    final title =
-        value?.replaceAll(RegExp(r'[\u0000-\u001f]'), '').trim() ?? '';
+    final title = AutomationLogSanitizer.sanitize(
+      value?.replaceAll(RegExp(r'[\u0000-\u001f]'), '').trim() ?? '',
+    ).replaceAll(RegExp(r'\b\d{5,}\b'), '[id oculto]');
     if (title.isEmpty) return 'Sin título';
     return title.length <= 120 ? title : title.substring(0, 120);
   }

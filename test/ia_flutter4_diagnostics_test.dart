@@ -156,6 +156,18 @@ void main() {
     },
   );
 
+  test(
+    'valores sensibles de título admiten sanitización previa a exportar',
+    () {
+      final sanitized = AutomationLogSanitizer.sanitize(
+        'Pedido 123456 para demo@example.test token=secreto',
+      ).replaceAll(RegExp(r'\b\d{5,}\b'), '[id oculto]');
+      expect(sanitized, isNot(contains('123456')));
+      expect(sanitized, isNot(contains('demo@example.test')));
+      expect(sanitized, isNot(contains('secreto')));
+    },
+  );
+
   test('resultado reconoce success error y unknown', () {
     expect(
       ResultTextDetector.detect('Solicitud enviada'),
