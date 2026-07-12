@@ -202,6 +202,83 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     validator: _validatePortalUrl,
                   ),
                   const SizedBox(height: 12),
+                  SwitchListTile(
+                    key: const Key('persist-session-switch'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Persistir sesión WebView'),
+                    subtitle: const Text(
+                      'Conserva el almacenamiento administrado por Android; la app no lee cookies.',
+                    ),
+                    value: settings.persistSession,
+                    onChanged: (value) => ref
+                        .read(appControllerProvider.notifier)
+                        .updateSettings(
+                          settings.copyWith(persistSession: value),
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          key: const Key('load-timeout-field'),
+                          initialValue: settings.loadTimeoutSeconds,
+                          decoration: const InputDecoration(
+                            labelText: 'Timeout carga',
+                          ),
+                          items: const [30, 45, 60, 90]
+                              .map(
+                                (seconds) => DropdownMenuItem(
+                                  value: seconds,
+                                  child: Text('$seconds s'),
+                                ),
+                              )
+                              .toList(growable: false),
+                          onChanged: (value) {
+                            if (value != null) {
+                              ref
+                                  .read(appControllerProvider.notifier)
+                                  .updateSettings(
+                                    settings.copyWith(
+                                      loadTimeoutSeconds: value,
+                                    ),
+                                  );
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          key: const Key('selector-timeout-field'),
+                          initialValue: settings.selectorTimeoutSeconds,
+                          decoration: const InputDecoration(
+                            labelText: 'Timeout selector',
+                          ),
+                          items: const [8, 12, 20, 30]
+                              .map(
+                                (seconds) => DropdownMenuItem(
+                                  value: seconds,
+                                  child: Text('$seconds s'),
+                                ),
+                              )
+                              .toList(growable: false),
+                          onChanged: (value) {
+                            if (value != null) {
+                              ref
+                                  .read(appControllerProvider.notifier)
+                                  .updateSettings(
+                                    settings.copyWith(
+                                      selectorTimeoutSeconds: value,
+                                    ),
+                                  );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   TextFormField(
                     key: const Key('additional-hosts-field'),
                     controller: _hostsController,
@@ -284,12 +361,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ListTile(
                     key: const Key('open-web-inspector'),
                     leading: const Icon(Icons.troubleshoot_outlined),
-                    title: const Text('Inspector Web'),
+                    title: const Text('Validación Automy'),
                     subtitle: const Text(
                       'Disponible con el portal abierto para diagnóstico y NRO OC.',
                     ),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/inspector'),
+                    onTap: () => context.push('/validation'),
                   ),
                 ],
               ],

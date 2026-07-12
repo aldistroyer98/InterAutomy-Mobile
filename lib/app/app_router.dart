@@ -24,6 +24,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/inspector',
         builder: (context, state) => const WebInspectorScreen(),
       ),
+      GoRoute(
+        path: '/validation',
+        builder: (context, state) => const WebInspectorScreen(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             ResponsiveNavigationShell(navigationShell: navigationShell),

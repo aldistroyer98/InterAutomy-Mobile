@@ -18,6 +18,9 @@ final class LocalSettingsRepository
   static const _additionalHostsKey = 'settings.additional_allowed_hosts';
   static const _developerModeKey = 'settings.developer_mode';
   static const _diagnosticModeKey = 'settings.diagnostic_mode';
+  static const _persistSessionKey = 'settings.persist_session';
+  static const _loadTimeoutKey = 'settings.load_timeout_seconds';
+  static const _selectorTimeoutKey = 'settings.selector_timeout_seconds';
   static const _themeKey = 'settings.theme';
   static const _futureTokenKey = 'future_api_token';
 
@@ -42,6 +45,9 @@ final class LocalSettingsRepository
           preferences.getStringList(_additionalHostsKey) ?? const [],
       developerMode: preferences.getBool(_developerModeKey) ?? false,
       diagnosticMode: preferences.getBool(_diagnosticModeKey) ?? false,
+      persistSession: preferences.getBool(_persistSessionKey) ?? true,
+      loadTimeoutSeconds: preferences.getInt(_loadTimeoutKey) ?? 45,
+      selectorTimeoutSeconds: preferences.getInt(_selectorTimeoutKey) ?? 12,
       theme: theme,
     );
   }
@@ -58,6 +64,9 @@ final class LocalSettingsRepository
       ),
       preferences.setBool(_developerModeKey, settings.developerMode),
       preferences.setBool(_diagnosticModeKey, settings.diagnosticMode),
+      preferences.setBool(_persistSessionKey, settings.persistSession),
+      preferences.setInt(_loadTimeoutKey, settings.loadTimeoutSeconds),
+      preferences.setInt(_selectorTimeoutKey, settings.selectorTimeoutSeconds),
       preferences.setString(_themeKey, settings.theme.name),
     ]);
   }

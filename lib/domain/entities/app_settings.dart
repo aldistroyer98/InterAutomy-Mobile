@@ -15,6 +15,9 @@ final class AppSettings {
     this.additionalAllowedHosts = const [],
     this.developerMode = false,
     this.diagnosticMode = false,
+    this.persistSession = true,
+    this.loadTimeoutSeconds = 45,
+    this.selectorTimeoutSeconds = 12,
     required this.theme,
   });
 
@@ -23,6 +26,9 @@ final class AppSettings {
   final List<String> additionalAllowedHosts;
   final bool developerMode;
   final bool diagnosticMode;
+  final bool persistSession;
+  final int loadTimeoutSeconds;
+  final int selectorTimeoutSeconds;
   final AppThemePreference theme;
 
   bool get hasPortalConfiguration => portalUrl.trim().isNotEmpty;
@@ -33,6 +39,9 @@ final class AppSettings {
     List<String>? additionalAllowedHosts,
     bool? developerMode,
     bool? diagnosticMode,
+    bool? persistSession,
+    int? loadTimeoutSeconds,
+    int? selectorTimeoutSeconds,
     AppThemePreference? theme,
   }) => AppSettings(
     demoMode: demoMode ?? this.demoMode,
@@ -41,6 +50,10 @@ final class AppSettings {
         additionalAllowedHosts ?? this.additionalAllowedHosts,
     developerMode: developerMode ?? this.developerMode,
     diagnosticMode: diagnosticMode ?? this.diagnosticMode,
+    persistSession: persistSession ?? this.persistSession,
+    loadTimeoutSeconds: loadTimeoutSeconds ?? this.loadTimeoutSeconds,
+    selectorTimeoutSeconds:
+        selectorTimeoutSeconds ?? this.selectorTimeoutSeconds,
     theme: theme ?? this.theme,
   );
 }
