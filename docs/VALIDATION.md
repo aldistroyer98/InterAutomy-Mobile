@@ -36,3 +36,19 @@ Fecha: 12 de julio de 2026 (America/Lima).
 - Infraestructura local, fixtures y compilación: se documentan con los resultados finales de esta iteración.
 
 Seguir [IA_FLUTTER4_ANDROID_CHECKLIST.md](IA_FLUTTER4_ANDROID_CHECKLIST.md) con acceso autorizado. No se habilita cliente completo, productos, archivos ni envío automático.
+
+## Validación final IA Flutter4
+
+Ejecutada desde `flutter clean` después de todos los commits funcionales:
+
+| Control | Resultado final |
+| --- | --- |
+| `flutter clean` | Aprobado. |
+| `flutter pub get` | Aprobado. |
+| `dart format .` | Aprobado; 93 archivos, 0 cambios. |
+| `flutter analyze` | Aprobado; sin incidencias. |
+| `flutter test` | Aprobado; 53 pruebas. |
+| `flutter build apk --debug` | Aprobado; `app-debug.apk`, 162 507 964 bytes. |
+| `flutter build appbundle --debug` | Aprobado; `app-debug.aab`, 78 708 700 bytes. |
+
+El workflow localmente equivalente queda aprobado. GitHub Actions remoto queda pendiente de push/ejecución; no se declara verde remoto sin evidencia.
