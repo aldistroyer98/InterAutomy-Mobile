@@ -293,6 +293,8 @@ final class SelectorProbeResult {
     this.insideShadowDom = false,
     this.insideIframe = false,
     this.alternatives = const [],
+    this.validationError = false,
+    this.validationSignal = '',
     this.version = AppConfig.selectorVersion,
   });
 
@@ -310,6 +312,8 @@ final class SelectorProbeResult {
   final bool insideShadowDom;
   final bool insideIframe;
   final List<SelectorAlternativeProbe> alternatives;
+  final bool validationError;
+  final String validationSignal;
   final String version;
 
   factory SelectorProbeResult.fromJson(
@@ -339,6 +343,8 @@ final class SelectorProbeResult {
             ),
           )
         : const [],
+    validationError: json['validationError'] == true,
+    validationSignal: _safeText(json['validationSignal']),
     version: _safeText(json['version'], fallback: AppConfig.selectorVersion),
   );
 
@@ -359,6 +365,8 @@ final class SelectorProbeResult {
     'alternatives': alternatives
         .map((alternative) => alternative.toJson())
         .toList(growable: false),
+    'validationError': validationError,
+    'validationSignal': validationSignal,
     'version': version,
   };
 }

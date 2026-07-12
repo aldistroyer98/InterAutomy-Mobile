@@ -257,6 +257,10 @@ final class NroOcAutomationService {
             ),
           )
         : const [],
+    validationError:
+        result.code == 'FIELD_VALIDATION_ERROR' ||
+        result.data['validationError'] == true,
+    validationSignal: result.data['validationSignal']?.toString() ?? '',
     version: AppConfig.selectorVersion,
   );
 }
