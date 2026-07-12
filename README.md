@@ -6,9 +6,36 @@ InterAutomy-Mobile es una aplicación Flutter autónoma para Android. Su flujo r
 
 No requiere PC, FastAPI, Selenium ni ChromeDriver. El WebView es el componente web incorporado en la aplicación Android; no controla Chrome externo. La URL privada del portal no forma parte del repositorio: el usuario la guarda localmente junto con los hosts SSO que autorice.
 
-## Estado IA Flutter4
+## Estado IA Flutter5
 
-IA Flutter4 es una fase de diagnóstico técnico real y seguro, no una automatización completa de Automy.
+IA Flutter5 conserva IA Flutter4 y añade tooling para una validación Android real. No es una automatización completa de Automy.
+
+| Función | Estado |
+|---|---|
+| WebView | Preparado para Automy; Android real `NOT_TESTED` |
+| Login | Soportado manualmente; Automy real `NOT_TESTED` |
+| Sesión | Modelo y medición preparados; real `NOT_TESTED` |
+| Inspector | Probado con widgets/contratos de fixtures; Android real `NOT_TESTED` |
+| NRO OC | Probado con contratos de fixtures; Automy real `NOT_TESTED` |
+| Productos | Pendiente |
+| Archivos | Pendiente |
+| Envío | Pendiente y desactivado |
+
+### Probado con fixtures
+
+Modelos, seguridad, PageDetector, navegación sanitizada, selector registry, estados NRO OC, errores contextuales y layouts. La suite Android WebView está creada, pero requiere un dispositivo para ejecutarse.
+
+### Preparado para Automy
+
+WebView HTTPS, login manual, hosts SSO confirmados por el usuario, sesión, Inspector, exportación y prueba NRO OC manualmente iniciada.
+
+### Probado en Automy real
+
+Nada todavía. No se proporcionaron Android, URL ni acceso autorizado durante esta iteración.
+
+### Pendiente
+
+Completar [la matriz real IA Flutter5](docs/IA_FLUTTER5_REAL_VALIDATION_MATRIX.md). Cliente completo, productos, archivos y envío permanecen fuera de alcance.
 
 - El modo Demo de IA Flutter2/3 continúa disponible.
 - El modo Automy WebView permite abrir un portal HTTPS configurado localmente.
@@ -29,9 +56,9 @@ flutter run
 
 1. En **Configuración**, mantén **Demo** o elige **Automy WebView**.
 2. Para WebView, guarda la URL HTTPS y, si aplica, hosts SSO adicionales.
-3. Activa **Modo desarrollador** para acceder a **Inspector Web**.
+3. Activa **Modo desarrollador** para acceder a **Validación Automy**.
 4. Abre el portal, inicia sesión y navega manualmente.
-5. En Inspector Web ejecuta el diagnóstico o la prueba explícita de NRO OC.
+5. En Validación Automy ejecuta el diagnóstico o la prueba explícita de NRO OC.
 6. Revisa y envía manualmente dentro de Automy.
 
 Si falta la URL, Automy WebView permanece deshabilitado y la app muestra instrucciones.
@@ -48,6 +75,9 @@ Si falta la URL, Automy WebView permanece deshabilitado y la app muestra instruc
 ## Documentación
 
 - [Alcance IA Flutter4](docs/IA_FLUTTER4_SCOPE.md)
+- [Alcance IA Flutter5](docs/IA_FLUTTER5_SCOPE.md)
+- [Matriz real IA Flutter5](docs/IA_FLUTTER5_REAL_VALIDATION_MATRIX.md)
+- [Resultados reales IA Flutter5](docs/IA_FLUTTER5_REAL_RESULTS.md)
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Decisión técnica WebView](docs/WEBVIEW_TECHNICAL_DECISION.md)
 - [Motor de automatización](docs/AUTOMATION_ENGINE.md)
