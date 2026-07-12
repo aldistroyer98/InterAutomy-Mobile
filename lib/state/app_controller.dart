@@ -179,6 +179,11 @@ final class AppController extends Notifier<AppState> {
   }
 
   Future<List<String>> startExecution() async {
+    if (!state.settings.demoMode) {
+      return const [
+        'La ejecución remota todavía no está habilitada. Activa el modo demostración.',
+      ];
+    }
     final client = state.selectedClient;
     if (client == null) return const ['Selecciona un cliente válido.'];
     final order = Order(
