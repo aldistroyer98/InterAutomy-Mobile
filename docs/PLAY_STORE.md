@@ -1,45 +1,18 @@
-# Preparación para Google Play
+# Preparación para Play Store
 
-## Antes de publicar
+La app es autónoma: no necesita un servidor propio, PC, FastAPI, Selenium ni
+ChromeDriver. Automy se visualiza en Android WebView dentro de la aplicación.
 
-- Cambiar a versión y build number aprobados.
-- Configurar firma release fuera del repositorio y Play App Signing.
-- Sustituir íconos y splash de plantilla por activos corporativos aprobados.
-- Definir nombre, descripción, categoría, correo y URL de soporte.
-- Preparar capturas de teléfono y tableta en español.
-- Publicar política de privacidad y términos.
-- Completar Seguridad de datos, clasificación de contenido y público objetivo.
-- Verificar nivel de API objetivo vigente y requisitos de tamaño de página.
-- Ejecutar pruebas en dispositivos físicos de distintos tamaños y versiones.
+Antes de publicar:
 
-## Seguridad y datos
+1. Configurar firma release y versión final.
+2. Declarar la política de privacidad y la finalidad del acceso a Internet.
+3. Verificar que no se solicitan permisos de almacenamiento amplio; el adjunto
+   usa Storage Access Framework.
+4. Probar SSO, selector de archivos y errores de red en Android físico.
+5. Mantener `allowAutomaticSubmission = false` hasta una evaluación de riesgo y
+   pruebas completas contra Automy.
+6. Documentar hosts de producción, soporte y el proceso para cerrar sesión.
 
-Declarar datos de cuenta, cliente, pedido, diagnóstico y telemetría según el
-contrato final. El MVP demo no debe presentarse como integración productiva. No
-subir secretos, almacenes de firma ni configuraciones privadas.
-
-## Calidad de release
-
-```powershell
-dart format --output=none --set-exit-if-changed .
-flutter analyze
-flutter test
-flutter build appbundle --release
-```
-
-Además se requieren pruebas de integración Android, accesibilidad, modo oscuro,
-red lenta/sin red, rotación, restauración de proceso y actualización desde una
-versión anterior.
-
-## Canales
-
-1. Internal testing para equipo técnico.
-2. Closed testing con usuarios de negocio y agente staging.
-3. Open testing solo si seguridad y soporte están listos.
-4. Producción gradual con monitoreo y rollback.
-
-## Riesgos pendientes
-
-No publicar como producto operativo hasta disponer de API, autenticación,
-agente Windows, persistencia remota, observabilidad, política de privacidad,
-activos definitivos y firma release.
+No incluir URL privada, credenciales, cookies, tokens, capturas de formularios
+ni HTML del portal en la ficha, APK o repositorio.
