@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/app_config.dart';
 import '../../../automation/nro_oc/nro_oc_automation_service.dart';
+import '../../../automation/logging/automation_log_sanitizer.dart';
 import '../../../automation/webview/portal_diagnostics.dart';
 import '../../../automation/webview_automation_gateway.dart';
 import '../../../core/security/webview_security_policy.dart';
+import '../../../state/app_controller.dart';
 import '../../../state/providers.dart';
 
 class WebInspectorScreen extends ConsumerStatefulWidget {
@@ -49,13 +52,90 @@ class _WebInspectorScreenState extends ConsumerState<WebInspectorScreen> {
   Widget build(BuildContext context) {
     final gateway = ref.watch(webViewAutomationGatewayProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Inspector Web')),
+      appBar: AppBar(title: const Text('Validación Automy')),
       body: ValueListenableBuilder<PortalDiagnostics>(
         valueListenable: gateway.diagnostics,
         builder: (context, data, _) => ListView(
           key: const Key('web-inspector-list'),
           padding: const EdgeInsets.all(16),
           children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    FilledButton.icon(
+                      key: const Key('open-real-portal'),
+                      onPressed: () {
+                        final settings = ref
+                            .read(appControllerProvider)
+                            .settings;
+                        if (!settings.hasPortalConfiguration) {
+                          context.go('/settings');
+                        } else {
+                          context.push('/portal');
+                        }
+                      },
+                      icon: const Icon(Icons.open_in_browser_outlined),
+                      label: const Text('Abrir portal'),
+                    ),
+                    const Chip(
+                      avatar: Icon(Icons.block_outlined, size: 18),
+                      label: Text('Envío desactivado'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ValueListenableBuilder(
+              valueListenable: gateway.sessionValidation,
+              builder: (context, session, _) => Card(
+                key: const Key('session-validation-card'),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sesión real',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Detectada: ${session.sessionDetected ? 'Sí' : 'No'}',
+                      ),
+                      Text(
+                        'Tras cerrar Portal: ${session.persistedAfterPortalClose ? 'Sí' : 'No probado'}',
+                      ),
+                      Text(
+                        'Tras segundo plano: ${session.persistedAfterBackground ? 'Sí' : 'No probado'}',
+                      ),
+                      Text(
+                        'Tras reiniciar app: ${session.persistedAfterAppRestart ? 'Sí' : 'No probado'}',
+                      ),
+                      Text('Expirada: ${session.expired ? 'Sí' : 'No'}'),
+                      Text(
+                        'Cookies limpiadas: ${session.cookiesCleared ? 'Sí' : 'No'}',
+                      ),
+                      if (session.notes.isNotEmpty) Text(session.notes),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          key: const Key('mark-logout-verified'),
+                          onPressed: _gateway.markLogoutVerified,
+                          child: const Text('Marcar logout verificado'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             _StatusCard(data: data),
             const SizedBox(height: 12),
             Card(
@@ -99,6 +179,17 @@ class _WebInspectorScreenState extends ConsumerState<WebInspectorScreen> {
                                 }),
                           icon: const Icon(Icons.file_download_outlined),
                           label: const Text('Exportar JSON'),
+                        ),
+                        OutlinedButton.icon(
+                          key: const Key('clear-real-session'),
+                          onPressed: _busy
+                              ? null
+                              : () => _run(() async {
+                                  await _gateway.clearSession();
+                                  return 'SESSION_CLEARED';
+                                }),
+                          icon: const Icon(Icons.logout_outlined),
+                          label: const Text('Limpiar sesión'),
                         ),
                       ],
                     ),
@@ -195,12 +286,51 @@ class _WebInspectorScreenState extends ConsumerState<WebInspectorScreen> {
                     Text(_result, key: const Key('nro-oc-result')),
                     const SizedBox(height: 8),
                     Text(
+                      'Valor en bitácora: ${AutomationLogSanitizer.maskValue(_valueController.text)}',
+                    ),
+                    Text(
                       'Selector lógico: ${data.selectorProbe.logicalKey}\n'
                       'Alternativa: ${data.selectorProbe.alternativeIndex ?? '-'}\n'
                       'Tiempo: ${data.selectorProbe.elapsedMilliseconds} ms · '
                       'Reintentos: ${data.selectorProbe.retries}',
                     ),
                   ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ValueListenableBuilder(
+              valueListenable: gateway.navigationLog,
+              builder: (context, events, _) => Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Navegación sanitizada',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      if (events.isEmpty)
+                        const Text('Sin eventos de navegación.')
+                      else
+                        ...events.reversed
+                            .take(10)
+                            .map(
+                              (event) => ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                dense: true,
+                                title: Text(
+                                  '${event.type.name} · ${event.decision}',
+                                ),
+                                subtitle: Text(
+                                  '${event.toHost}${event.toUrl.isEmpty ? '' : ' · ${event.toUrl}'}\n${event.reason}',
+                                ),
+                              ),
+                            ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -267,10 +397,26 @@ class _StatusCard extends StatelessWidget {
       ),
       ('Cookies', data.storage.cookies ? 'Disponibles' : 'No disponibles'),
       ('Último selector lógico', data.lastSelectorLogical ?? 'Ninguno'),
+      (
+        'Tipo/tag selector',
+        '${data.selectorProbe.elementType}/${data.selectorProbe.tag}',
+      ),
+      ('Dentro de iframe', data.selectorProbe.insideIframe ? 'Sí' : 'No'),
+      (
+        'Dentro de Shadow DOM',
+        data.selectorProbe.insideShadowDom ? 'Sí' : 'No',
+      ),
+      (
+        'Validación del campo',
+        data.selectorProbe.validationError
+            ? 'Error: ${data.selectorProbe.validationSignal}'
+            : 'Sin error detectado',
+      ),
       ('Último paso', data.lastStep ?? 'Ninguno'),
       ('Último error sanitizado', data.lastError ?? 'Ninguno'),
       ('Workflow', AppConfig.workflowVersion),
       ('Selectores', AppConfig.selectorVersion),
+      ('Scripts', AppConfig.scriptVersion),
     ];
     return Card(
       child: Padding(
