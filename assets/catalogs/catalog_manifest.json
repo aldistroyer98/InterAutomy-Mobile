@@ -1,0 +1,85 @@
+{
+  "checksum": "7ba838e32ee79cae0fc575ed7e9fba1ae3cdedf8ae4d67ce85f4564ceffeaad2",
+  "clients": 3128,
+  "comodatos": 0,
+  "generatedAt": "2026-07-13T05:19:33Z",
+  "institutions": 0,
+  "lines": 62,
+  "options": {
+    "Hora fin": [
+      "08:00 am",
+      "09:00 am",
+      "10:00 am",
+      "11:00 am",
+      "12:00 pm",
+      "13:00 pm",
+      "14:00 pm",
+      "15:00 pm",
+      "16:00 pm",
+      "17:00 pm",
+      "18:00 pm"
+    ],
+    "Hora inicio": [
+      "08:00 am",
+      "09:00 am",
+      "10:00 am",
+      "11:00 am",
+      "12:00 pm",
+      "13:00 pm",
+      "14:00 pm",
+      "15:00 pm",
+      "16:00 pm",
+      "17:00 pm",
+      "18:00 pm"
+    ],
+    "IGV": [
+      "NO",
+      "SI"
+    ],
+    "Moneda": [
+      "Dolares",
+      "Soles"
+    ],
+    "Regularizar adelanto": [
+      "No",
+      "Si"
+    ],
+    "Tipo/Categoria": [
+      "Complemento",
+      "Consumibles",
+      "Muestra",
+      "Venta"
+    ],
+    "Unidad": [
+      "Banco de organos",
+      "Banco de Sangre",
+      "Laboratorio",
+      "POC"
+    ],
+    "Unidad de medida": [
+      "Cajas",
+      "Ciento de unidad",
+      "cm3",
+      "Despegable bolsa",
+      "Determinación",
+      "Frasco",
+      "Gramos",
+      "Kit",
+      "m3",
+      "Millares",
+      "ml",
+      "Paquete",
+      "Prueba",
+      "Tubo",
+      "Unidad"
+    ]
+  },
+  "products": 8838,
+  "schemaVersion": 1,
+  "sourceDesktopCommit": "e238e4788e40d96c7d3f2387dcc60d51123159b0",
+  "unavailableSources": {
+    "comodatos": "Los maestros IA1 versionados no contienen comodatos por cliente/línea.",
+    "institutions": "Los maestros IA1 versionados no contienen instituciones.",
+    "productDetails": "No hay precios, códigos, presentación, categoría o expiración por producto."
+  }
+}

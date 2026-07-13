@@ -1,0 +1,254 @@
+{
+  "items": [
+    {
+      "id": "ia1-line-46776f420fd0f2d2f2a6",
+      "name": "ABBOTT BIOQUIMICA"
+    },
+    {
+      "id": "ia1-line-98e923664cda7ae5a866",
+      "name": "ABBOTT HEMATOLOGIA"
+    },
+    {
+      "id": "ia1-line-24f0bf63bd05a5945df3",
+      "name": "ABBOTT INMUNOLOGIA"
+    },
+    {
+      "id": "ia1-line-7f22193e131296033691",
+      "name": "ABBOTT MOLECULAR"
+    },
+    {
+      "id": "ia1-line-9c187c02aab35da710aa",
+      "name": "ABBOTT RAPID DIAGNOSTIC"
+    },
+    {
+      "id": "ia1-line-8344bfbf9bfb46bbe22f",
+      "name": "ABBOTT SEROLOGIA"
+    },
+    {
+      "id": "ia1-line-1ba2660af53319ece552",
+      "name": "ALL TEST"
+    },
+    {
+      "id": "ia1-line-0e3053b074402c4cef78",
+      "name": "ANATOLIA"
+    },
+    {
+      "id": "ia1-line-6cae9c924d6aea84a68b",
+      "name": "ANBIO"
+    },
+    {
+      "id": "ia1-line-c0ac5aef53809b21d153",
+      "name": "ARKRAY"
+    },
+    {
+      "id": "ia1-line-6446405667ec7726aa77",
+      "name": "ART ROBBINS INSTRUMENTS"
+    },
+    {
+      "id": "ia1-line-362a78862ebc45ee5c58",
+      "name": "ASHI"
+    },
+    {
+      "id": "ia1-line-e1b4a58172798fb102d8",
+      "name": "BD CITOMETRIA"
+    },
+    {
+      "id": "ia1-line-db116eb2865a7b350bb9",
+      "name": "BD VACUTAINER"
+    },
+    {
+      "id": "ia1-line-07ad04644f17a42e588a",
+      "name": "BIORAD"
+    },
+    {
+      "id": "ia1-line-0974a31258830e0c7dfe",
+      "name": "CHROMSYSTEMS"
+    },
+    {
+      "id": "ia1-line-32fe6b7f34eaba5bed2b",
+      "name": "CONTROLLAB"
+    },
+    {
+      "id": "ia1-line-8128e9cba3c3be3a375d",
+      "name": "DIAGAST"
+    },
+    {
+      "id": "ia1-line-77becf2992db78eeb8c1",
+      "name": "DIAPRO"
+    },
+    {
+      "id": "ia1-line-cdd15f341062e02ed917",
+      "name": "DIAPRO SARA"
+    },
+    {
+      "id": "ia1-line-ae37c107dcf859019b39",
+      "name": "ELITECH GROUP"
+    },
+    {
+      "id": "ia1-line-4fed5abc9059d034ad70",
+      "name": "EUROIMMUN"
+    },
+    {
+      "id": "ia1-line-811b0c106427e9ec0ae6",
+      "name": "GENEALL"
+    },
+    {
+      "id": "ia1-line-176fa8eefe1bae436dd1",
+      "name": "GENESIS BPS"
+    },
+    {
+      "id": "ia1-line-14e55e9ef2286feff713",
+      "name": "GRIFOLS DIAGNOSTICA"
+    },
+    {
+      "id": "ia1-line-a68001af32e2cc016548",
+      "name": "IL COAGULACION"
+    },
+    {
+      "id": "ia1-line-e691a4ddb9acc42d28c1",
+      "name": "ISENS"
+    },
+    {
+      "id": "ia1-line-7b336dfd3d684dfd48dc",
+      "name": "KIMETEC"
+    },
+    {
+      "id": "ia1-line-03fb80faac6eca77be24",
+      "name": "KONSUNG"
+    },
+    {
+      "id": "ia1-line-c59f6bf4e82d5366098d",
+      "name": "LABSYSTEMS"
+    },
+    {
+      "id": "ia1-line-8d6b1ab980d0948d76b5",
+      "name": "LIFE TECHNOLOGIES CORPORATION"
+    },
+    {
+      "id": "ia1-line-a4a260ec5cfb608b396d",
+      "name": "MACHEREY NAGEL"
+    },
+    {
+      "id": "ia1-line-371e7829f3c30a1cb87c",
+      "name": "MAGLUMI"
+    },
+    {
+      "id": "ia1-line-a1a46a6bc1fb29c21574",
+      "name": "MEDSOURCE"
+    },
+    {
+      "id": "ia1-line-46406328a627bcd12fcf",
+      "name": "MICOBIOMED"
+    },
+    {
+      "id": "ia1-line-e1c1fccb938bf3cefab1",
+      "name": "MINDRAY"
+    },
+    {
+      "id": "ia1-line-51826ed08b3aa69f3591",
+      "name": "MINDRAY BIOQUIMICA"
+    },
+    {
+      "id": "ia1-line-34a973f66f379a77bf5c",
+      "name": "MINDRAY HEMATOLOGIA"
+    },
+    {
+      "id": "ia1-line-505fa5e79297f0ec779e",
+      "name": "MINDRAY HPLC"
+    },
+    {
+      "id": "ia1-line-19c6a0f0da1aaaafe527",
+      "name": "MINDRAY INMUNOLOGIA"
+    },
+    {
+      "id": "ia1-line-4d13e1dbe7ab3f90f7cf",
+      "name": "MITSUBISHI"
+    },
+    {
+      "id": "ia1-line-4feef4cd7c444c0bfe42",
+      "name": "MOLBIO"
+    },
+    {
+      "id": "ia1-line-335d644a8b369aa80be5",
+      "name": "ONE LAMBDA"
+    },
+    {
+      "id": "ia1-line-4571cac2f6b335c2a612",
+      "name": "PHADIA"
+    },
+    {
+      "id": "ia1-line-ed843584fe7f1c592144",
+      "name": "PHC-PATHFAST"
+    },
+    {
+      "id": "ia1-line-6b8d3d7a3768cf89419c",
+      "name": "PRESVAC"
+    },
+    {
+      "id": "ia1-line-90b9d94e69401414931c",
+      "name": "PROASECAL"
+    },
+    {
+      "id": "ia1-line-49af90577caac5a2e615",
+      "name": "RANDOX"
+    },
+    {
+      "id": "ia1-line-132ee7fe2adcc48f110a",
+      "name": "ROCHE"
+    },
+    {
+      "id": "ia1-line-71dd38dce7a781037ca9",
+      "name": "ROTAPEL"
+    },
+    {
+      "id": "ia1-line-a4e5fcecff6fd5e4b679",
+      "name": "SARSTEDT"
+    },
+    {
+      "id": "ia1-line-69741455cbd4a5c57ae8",
+      "name": "SERVICIOS"
+    },
+    {
+      "id": "ia1-line-6ee0eb490ff832101cf8",
+      "name": "SET"
+    },
+    {
+      "id": "ia1-line-71328f9b280dd952529c",
+      "name": "SNIBE INMUNOLOGIA"
+    },
+    {
+      "id": "ia1-line-c815b62a96ca7116aa9f",
+      "name": "SPINREACT"
+    },
+    {
+      "id": "ia1-line-d57bdbdd979547722330",
+      "name": "SUN TRINE"
+    },
+    {
+      "id": "ia1-line-b461ed25d849b9f2be78",
+      "name": "TERUMO"
+    },
+    {
+      "id": "ia1-line-2c9bbdff35d41ae20bdb",
+      "name": "THE BINDING SITE"
+    },
+    {
+      "id": "ia1-line-1994d77b7cf4860a616b",
+      "name": "TREK"
+    },
+    {
+      "id": "ia1-line-4e432aac3b624ce02def",
+      "name": "URIT MEDICAL"
+    },
+    {
+      "id": "ia1-line-7f7614e85949a63324b0",
+      "name": "VACUTEST KIMA"
+    },
+    {
+      "id": "ia1-line-3190d6058f53dd34361f",
+      "name": "VARIOS"
+    }
+  ],
+  "schemaVersion": 1,
+  "source": "AutoDataProductos.xlsx"
+}
