@@ -35,3 +35,17 @@ python tools/catalog_migration/validate_catalog_assets.py
 Comprueba JSON, `schemaVersion`, fuente, manifiesto, opciones, conteos, IDs
 únicos, relaciones producto–línea, referencias opcionales de comodato y el
 checksum de los cinco catálogos. No publica archivos Excel ni modifica assets.
+
+## Auditar completitud y readiness
+
+El auditor es de solo lectura y produce evidencia JSON y Markdown bajo
+`build/reports/`:
+
+```powershell
+python tools/catalog_migration/audit_catalog_quality.py
+python -m unittest tools.catalog_migration.test_audit_catalog_quality -v
+```
+
+Reporta totales, porcentajes incompletos, duplicados, relaciones inválidas y la
+disponibilidad explícita de precio, código comercial, institución y comodato.
+No rellena campos ausentes ni convierte IDs técnicos en códigos comerciales.
