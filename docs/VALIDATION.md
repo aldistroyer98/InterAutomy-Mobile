@@ -1,72 +1,80 @@
-# Evidencia de validación de la fase de paridad IA1
+# Evidencia de validación de paridad IA1
 
-## Regla de lectura
+Fecha: 2026-07-13 (America/Lima).
+Rama local: `feature/ia1-mobile-parity`.
+Commit inicial: `3d44632f074170b6ade76e9308b37ae8406834ed`.
+Referencia Desktop auditada: `e238e4788e40d96c7d3f2387dcc60d51123159b0`.
 
-Este documento no convierte una línea base histórica en evidencia del árbol
-actual. Cada estado distingue entre resultados comprobados antes de la
-consolidación y controles que deben ejecutarse nuevamente después de los cambios
-de providers, catálogo y dominio.
+## Validación local desde cero
 
-## Línea base comprobada
+Los resultados siguientes se obtuvieron después de los cambios actuales; no se
+copiaron de validaciones anteriores.
 
-| Dato | Resultado |
-| --- | --- |
-| Rama inicial | `validation/automy-real-webview` |
-| Commit móvil de partida | `5f18a4799e4b99c1fa825fb6ea5c63ae855215b5` |
-| Commit Desktop de referencia | `e238e4788e40d96c7d3f2387dcc60d51123159b0` (`IA1`) |
-| Flutter / Dart | Flutter 3.44.6 / Dart 3.12.2 |
-| Formato | PASSED: 98 archivos, 0 cambios. |
-| Análisis | PASSED: sin incidencias. |
-| Pruebas | PASSED: 60. |
-| APK debug | PASSED. |
-| AAB debug | PASSED. |
-| Galaxy A26 detectado | PASSED: `R5CY341H3NN`, Android 16/API 36. |
+| Control | Resultado |
+|---|---|
+| `flutter clean` | PASSED; 6.8 s, eliminó `build`, `.dart_tool` y efímeros |
+| `flutter pub get` | PASSED; 2.2 s |
+| `dart format --output=none --set-exit-if-changed .` | PASSED; 123 archivos, 0 cambios |
+| `python tools/catalog_migration/validate_catalog_assets.py` | PASSED; 3,128 clientes, 62 líneas, 8,838 productos, 0 instituciones, 0 comodatos; checksum `5a687495…83912` |
+| Auditoría/pruebas Python | PASSED; 2 pruebas, 0.197 s |
+| `flutter analyze` | PASSED; sin issues, 2.1 s |
+| `flutter test --reporter expanded --timeout 60s` | PASSED; 87 pruebas, 11 s reportados/26 s de pared |
+| Provider graph productivo | PASSED; construye repositorio/configuración, ambos gateways, selector, `AppController` y `ExecutionScreen`; recorre Demo→WebView sin URL→Demo, dispose y rebuild |
+| Persistencia | PASSED; esquema, checksum, backup, recuperación, concurrencia e interrupción |
+| Flujo IA1 con fixture válido | PASSED en host; Demo llega a revisión, confirma, guarda historial/perfil y los restaura con un store nuevo |
+| IA1 incompleto | PASSED; sigue consultable y la ejecución se bloquea por precio, código, presentación y categoría |
+| `flutter build apk --debug` | PASSED; Gradle 73.3 s |
+| `flutter build appbundle --debug` | PASSED; Gradle 18.1 s |
+| Integración Android | BLOCKED; no hay dispositivo/AVD conectado |
+| Integración Windows alternativa | BLOCKED por falta de toolchain Visual Studio; no es un fallo Android |
 
-La línea base y el bloqueo original se detallan en
-[PARITY_BASELINE.md](PARITY_BASELINE.md). El error histórico era
-`CircularDependencyError` al construir el gateway desde el controlador; el
-grafo corregido se documenta en
-[PROVIDER_DEPENDENCY_GRAPH.md](PROVIDER_DEPENDENCY_GRAPH.md).
+## Artefactos locales
 
-## Controles requeridos para la entrega del árbol actual
+| Artefacto | Bytes | SHA-256 |
+|---|---:|---|
+| `build/app/outputs/flutter-apk/app-debug.apk` | 161,683,794 | `7EE49531AD95A80E5D5671B5528919D20A54902D412C2AF6E91081659D74F5FB` |
+| `build/app/outputs/bundle/debug/app-debug.aab` | 77,969,106 | `F20611CF0EDC63F120B3A0E7E8EBC9B6DEA1CC17F12688449D3CAF9A038AE375` |
+| `build/reports/catalog_quality_report.json` | 3,564 | `BDF3717402093B13F5D418D8B71DB79F9650F79CB5263A11B302BC5DEF99E126` |
+| `build/reports/catalog_quality_report.md` | 2,182 | `891B1938C0219871A7980E0C6E84BF1BB2F9CCF2B7591B75F14EE82DB54CE9AE` |
 
-```powershell
-flutter clean
-flutter pub get
-dart format --output=none --set-exit-if-changed .
-flutter analyze
-flutter test
-flutter build apk --debug
-flutter build appbundle --debug
-python tools/catalog_migration/validate_catalog_assets.py
-git diff --check
-git status --short
-```
+Los informes bajo `build/` son generados y no se versionan. CI los publica
+dentro de `catalog-migration-report`.
 
-| Control | Estado de evidencia en este documento |
-| --- | --- |
-| Formato actual | PASSED: `dart format --output=none --set-exit-if-changed .` revisó 119 archivos sin cambios. |
-| Validación estructural del catálogo IA1 | PASSED localmente el 12 de julio de 2026: 3 128 clientes, 62 líneas, 8 838 productos, 0 instituciones, 0 comodatos y checksum coincidente. CI la repite antes de las pruebas Flutter. |
-| Análisis estático actual | PASSED: `flutter analyze` no informó incidencias. |
-| Suite Flutter actual | PASSED: `flutter test --reporter compact` completó 75 pruebas sin fallos. |
-| Pruebas de grafo, catálogo y validación | PASSED dentro de la suite completa, incluidas `provider_graph_test.dart`, `catalog_migration_test.dart` y `order_validation_service_test.dart`. |
-| Persistencia, selector OC e institución/perfil | PASSED dentro de la suite completa mediante pruebas tipadas de almacén local, selector y controlador Cliente. |
-| Integración en dispositivo | BLOCKED: el último `adb devices` no mostró Galaxy A26; ver `GALAXY_A26_VALIDATION.md`. |
-| APK y AAB actuales | PASSED: ambos debug se construyeron correctamente tras corregir Kotlin. |
-| GitHub Actions remoto | PENDING hasta push y ejecución visible. |
+## CI remoto comprobado
 
-`PENDING` expresa falta de evidencia final en este documento, no un resultado
-fallido. Solo se cambia a `PASSED` con el comando y el árbol exactos de la
-entrega. Un fallo debe registrar comando, fecha, salida relevante y causa sin
-incluir secretos.
+GitHub Actions run `29245377814` (`Flutter CI #7`) corresponde al commit
+`3d44632f074170b6ade76e9308b37ae8406834ed` en
+`validation/automy-real-webview`. El job
+`Formato, catálogos, pruebas y Android` terminó `success`; sus pasos de formato,
+catálogo, análisis, pruebas, APK, AAB y uploads terminaron `success`.
+
+Artefactos remotos comprobados, creados el 2026-07-13 y con expiración
+2026-07-20:
+
+- `interautomy-mobile-parity-debug-apk` — 83,261,929 bytes comprimidos;
+- `interautomy-mobile-parity-debug-aab` — 77,157,590 bytes comprimidos;
+- `catalog-migration-report` — 1,797 bytes comprimidos.
+
+Este run valida el commit base publicado. El estado remoto de las correcciones
+posteriores queda `PENDING` hasta hacer commit/push y observar un run nuevo; no
+se extrapola el verde anterior.
+
+## Galaxy A26
+
+`adb devices -l` devolvió la lista vacía. El serial `R5CY341H3NN` no estuvo
+disponible, por lo que `flutter run -d R5CY341H3NN`, la integración Android y la
+matriz de 40 casos quedan `BLOCKED`. Ver
+`GALAXY_A26_PARITY_RESULTS.md`. Ningún caso manual se marca aprobado por el
+hecho de que compile o pase una prueba host.
 
 ## Alcance de CI
 
-El workflow ejecuta instalación, formato, validación de assets, análisis,
-pruebas, APK debug y AAB debug. Publica tres artefactos sin Excel fuente:
+El workflow actual ejecuta dependencias, formato, validación y auditoría de
+catálogos, pruebas Python, análisis, pruebas Flutter, APK y AAB. Publica:
 
-- `interautomy-mobile-parity-debug-apk`
-- `interautomy-mobile-parity-debug-aab`
-- `catalog-migration-report`
+- `interautomy-mobile-parity-debug-apk`;
+- `interautomy-mobile-parity-debug-aab`;
+- `catalog-migration-report` con migración y calidad JSON/Markdown.
 
-CI no abre Automy real, no contiene credenciales y no prueba una URL privada.
+CI no abre Automy, no contiene credenciales y no sustituye la prueba física del
+Galaxy.
