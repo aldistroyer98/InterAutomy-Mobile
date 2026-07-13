@@ -46,6 +46,9 @@ def sha256_files(paths: Iterable[Path]) -> str:
     for path in sorted(paths, key=lambda item: item.name):
         digest.update(path.name.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(path.read_bytes())
+        contents = path.read_bytes()
+        # Git puede materializar estos JSON de texto con CRLF en Windows y LF
+        # en CI. El checksum representa el contenido, no el checkout local.
+        digest.update(contents.replace(b"\r\n", b"\n").replace(b"\r", b"\n"))
         digest.update(b"\0")
     return digest.hexdigest()

@@ -15,7 +15,7 @@ copiaron de validaciones anteriores.
 | `flutter clean` | PASSED; 6.8 s, eliminó `build`, `.dart_tool` y efímeros |
 | `flutter pub get` | PASSED; 2.2 s |
 | `dart format --output=none --set-exit-if-changed .` | PASSED; 123 archivos, 0 cambios |
-| `python tools/catalog_migration/validate_catalog_assets.py` | PASSED; 3,128 clientes, 62 líneas, 8,838 productos, 0 instituciones, 0 comodatos; checksum `5a687495…83912` |
+| `python tools/catalog_migration/validate_catalog_assets.py` | PASSED; 3,128 clientes, 62 líneas, 8,838 productos, 0 instituciones, 0 comodatos; checksum canónico `7ba838e3…aad2` |
 | Auditoría/pruebas Python | PASSED; 2 pruebas, 0.197 s |
 | `flutter analyze` | PASSED; sin issues, 2.1 s |
 | `flutter test --reporter expanded --timeout 60s` | PASSED; 87 pruebas, 11 s reportados/26 s de pared |

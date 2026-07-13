@@ -35,6 +35,8 @@ python tools/catalog_migration/validate_catalog_assets.py
 Comprueba JSON, `schemaVersion`, fuente, manifiesto, opciones, conteos, IDs
 únicos, relaciones producto–línea, referencias opcionales de comodato y el
 checksum de los cinco catálogos. No publica archivos Excel ni modifica assets.
+El checksum canoniza LF/CRLF para representar el mismo contenido en Windows y
+en los runners Linux de CI.
 
 ## Auditar completitud y readiness
 

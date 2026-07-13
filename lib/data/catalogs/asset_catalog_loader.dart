@@ -77,7 +77,7 @@ final class AssetCatalogLoader {
     for (final (path, bytes) in entries) {
       checksumBytes.addAll(utf8.encode(path.split('/').last));
       checksumBytes.add(0);
-      checksumBytes.addAll(_bytes(bytes));
+      checksumBytes.addAll(_canonicalTextBytes(bytes));
       checksumBytes.add(0);
     }
     final checksum = sha256.convert(checksumBytes).toString();
@@ -164,4 +164,8 @@ final class AssetCatalogLoader {
 
   static List<int> _bytes(ByteData data) =>
       data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+
+  static List<int> _canonicalTextBytes(ByteData data) => utf8.encode(
+    utf8.decode(_bytes(data)).replaceAll('\r\n', '\n').replaceAll('\r', '\n'),
+  );
 }

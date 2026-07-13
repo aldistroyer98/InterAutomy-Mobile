@@ -27,9 +27,9 @@ publicado; las observaciones se corrigen en commits posteriores.
 - Impacto: incorpora 3,128 clientes, 62 líneas y 8,838 productos; instituciones
   y comodatos quedan explícitamente vacíos.
 - Riesgos: los productos solo tienen `id`, `lineId` y `name`; no hay precio,
-  código comercial separado, presentación ni categoría. El checksum guardado
-  en el manifiesto no coincidía con los bytes versionados y fue corregido sin
-  cambiar los catálogos.
+  código comercial separado, presentación ni categoría. El checksum original
+  sí correspondía a los blobs LF, pero el validador era sensible al checkout
+  CRLF de Windows; el cálculo fue canonizado sin cambiar los catálogos.
 - Pruebas: validadores Python de forma, unicidad, relaciones y manifiesto.
 - Deuda: faltaba medir completitud y separar “consultable” de “ejecutable”.
 - Adecuación del mensaje: correcta; describe artefactos reproducibles, no

@@ -9,6 +9,7 @@ from tools.catalog_migration.audit_catalog_quality import (
     build_report,
     write_reports,
 )
+from tools.catalog_migration.schemas import sha256_files
 
 
 class CatalogQualityAuditTest(unittest.TestCase):
@@ -34,6 +35,18 @@ class CatalogQualityAuditTest(unittest.TestCase):
             self.assertTrue(markdown_path.is_file())
             self.assertIn("readyForExecution", json_path.read_text(encoding="utf-8"))
             self.assertIn("## Productos", markdown_path.read_text(encoding="utf-8"))
+
+    def test_catalog_checksum_is_independent_of_checkout_line_endings(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            lf_path = root / "lf" / "catalog.json"
+            crlf_path = root / "crlf" / "catalog.json"
+            lf_path.parent.mkdir()
+            crlf_path.parent.mkdir()
+            lf_path.write_bytes(b'{"items": []}\n')
+            crlf_path.write_bytes(b'{"items": []}\r\n')
+
+            self.assertEqual(sha256_files([lf_path]), sha256_files([crlf_path]))
 
 
 if __name__ == "__main__":
