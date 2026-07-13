@@ -1,92 +1,73 @@
 # InterAutomy-Mobile
 
-InterAutomy-Mobile es una aplicación Flutter autónoma para Android. Su flujo real es:
+InterAutomy-Mobile es una aplicación Flutter para Android que consolida el
+flujo móvil de pedidos antes de ampliar la automatización real de Automy. La
+aplicación no requiere PC, FastAPI, Selenium, ChromeDriver, un agente Windows
+ni control de Chrome externo.
 
-`InterAutomy-Mobile → Android WebView integrado → portal Automy`
+El WebView integrado se conserva para navegación HTTPS y asistencia manual en
+el portal Automy. La automatización real de clientes, productos, archivos y
+envío **no** forma parte de esta fase.
 
-No requiere PC, FastAPI, Selenium ni ChromeDriver. El WebView es el componente web incorporado en la aplicación Android; no controla Chrome externo. La URL privada del portal no forma parte del repositorio: el usuario la guarda localmente junto con los hosts SSO que autorice.
+## Estado de esta fase
 
-## Estado IA Flutter5
+| Área | Estado verificable |
+| --- | --- |
+| Selección de motor | `SettingsController` selecciona Demo o WebView sin que el gateway dependa de `AppController`. |
+| Flujo Demo | Cliente → productos → validación tipada → ejecución/revisión → confirmación → historial está implementado en el estado de la aplicación y cubierto por pruebas de regresión. |
+| Fuente Demo | Disponible por defecto, con datos reproducibles para desarrollo y pruebas. |
+| Fuente Catálogo IA1 | Disponible en Ajustes; consume assets JSON validados y no hace fallback silencioso a Demo. |
+| Catálogo IA1 migrado | 3 128 clientes, 62 líneas y 8 838 relaciones línea-producto. Instituciones y comodatos: 0 porque no existían maestros versionados de IA1. |
+| WebView | Conservado; URL, hosts permitidos, sesión, timeouts e inspector siguen configurables. La interacción real con Automy continúa manual y pendiente de una validación autorizada. |
+| Persistencia compleja | `LocalDomainStore` versionado persiste clientes/instituciones locales, historial y perfiles en el directorio privado de la app; la integración de toda la UI sigue siendo parcial. |
 
-IA Flutter5 conserva IA Flutter4 y añade tooling para una validación Android real. No es una automatización completa de Automy.
+El catálogo IA1 aporta únicamente los campos comprobables de los libros fuente:
+nombres de cliente, líneas comerciales y relaciones línea-producto. No se
+inventan precios, códigos comerciales, presentación, categoría, expiración,
+instituciones ni comodatos. Por ello, los productos IA1 señalan explícitamente
+los campos no verificados y la validación exige un precio autorizado antes de
+ejecutar.
 
-| Función | Estado |
-|---|---|
-| WebView | Preparado para Automy; Android real `NOT_TESTED` |
-| Login | Soportado manualmente; Automy real `NOT_TESTED` |
-| Sesión | Modelo y medición preparados; real `NOT_TESTED` |
-| Inspector | Probado con widgets/contratos de fixtures; Android real `NOT_TESTED` |
-| NRO OC | Probado con contratos de fixtures; Automy real `NOT_TESTED` |
-| Productos | Pendiente |
-| Archivos | Pendiente |
-| Envío | Pendiente y desactivado |
-
-### Probado con fixtures
-
-Modelos, seguridad, PageDetector, navegación sanitizada, selector registry, estados NRO OC, errores contextuales y layouts. La suite Android WebView está creada, pero requiere un dispositivo para ejecutarse.
-
-### Preparado para Automy
-
-WebView HTTPS, login manual, hosts SSO confirmados por el usuario, sesión, Inspector, exportación y prueba NRO OC manualmente iniciada.
-
-### Probado en Automy real
-
-Nada todavía. No se proporcionaron Android, URL ni acceso autorizado durante esta iteración.
-
-### Pendiente
-
-Completar [la matriz real IA Flutter5](docs/IA_FLUTTER5_REAL_VALIDATION_MATRIX.md). Cliente completo, productos, archivos y envío permanecen fuera de alcance.
-
-- El modo Demo de IA Flutter2/3 continúa disponible.
-- El modo Automy WebView permite abrir un portal HTTPS configurado localmente.
-- El inicio de sesión y la navegación hasta el formulario son manuales.
-- El Inspector Web resume página, framework, controles, iframes, Shadow DOM abierto, almacenamiento, popups y errores sin extraer HTML, cookies ni valores.
-- La única automatización DOM habilitada es detectar, completar y volver a leer **NRO OC**, iniciada manualmente en modo desarrollador.
-- El envío final siempre es manual dentro de Automy; la app no presenta un botón de envío automático.
-- Productos, comodatos y carga automática de archivos en el portal están pendientes.
-
-La infraestructura puede validarse con fixtures locales y CI. Login, persistencia de sesión y NRO OC contra Automy real solo se consideran confirmados después de la checklist Android con una URL y cuenta autorizadas.
-
-## Uso
+## Uso local
 
 ```powershell
 flutter pub get
 flutter run
 ```
 
-1. En **Configuración**, mantén **Demo** o elige **Automy WebView**.
-2. Para WebView, guarda la URL HTTPS y, si aplica, hosts SSO adicionales.
-3. Activa **Modo desarrollador** para acceder a **Validación Automy**.
-4. Abre el portal, inicia sesión y navega manualmente.
-5. En Validación Automy ejecuta el diagnóstico o la prueba explícita de NRO OC.
-6. Revisa y envía manualmente dentro de Automy.
+1. En **Ajustes**, elige **Demo** o **Catálogo IA1** como fuente de datos.
+2. Mantén **Demo** como motor para recorrer el flujo seguro sin Automy real.
+3. Para WebView, selecciona ese motor y guarda una URL HTTPS junto con los hosts
+   SSO que correspondan.
+4. La validación previa muestra errores y advertencias tipados; los detalles
+   técnicos solo se conservan en modo desarrollador.
 
-Si falta la URL, Automy WebView permanece deshabilitado y la app muestra instrucciones.
+## Límites deliberados
+
+- No hay envío automático a Automy.
+- No se automatizan productos, archivos ni formularios completos dentro del
+  DOM de Automy.
+- El archivo OC usa SAF y conserva solo URI, nombre y MIME; Cliente permite
+  elegir, abrir, cambiar y quitar la referencia, sin cargarla a Automy.
+- Clientes e instituciones personalizados se guardan en el almacén local.
+  Cliente permite seleccionar, crear y editar instituciones; la gestión de
+  comodatos todavía no está completa.
+- Perfiles locales permite guardar, cargar, renombrar, duplicar y eliminar;
+  todavía no muestra un indicador explícito de cambios sin guardar.
+- Mercado/SEACE no se incluye en la navegación móvil de esta fase.
 
 ## Seguridad
 
-- JavaScript local solo se ejecuta en hosts HTTPS autorizados.
-- No se almacenan credenciales ni se registran cookies, tokens, HTML o texto completo del portal.
-- Nuevas ventanas y enlaces externos pasan por la política de navegación.
-- Errores SSL no se ignoran.
-- No se descargan scripts desde internet.
-- No se usa Python, Appium, AccessibilityService, OCR ni automatización por coordenadas.
+- No se almacenan credenciales, cookies legibles, tokens ni secretos.
+- JavaScript local solo se ejecuta en hosts HTTPS autorizados y se mantiene la
+  política de navegación del WebView.
+- Los mensajes para usuario no exponen excepciones técnicas. El detalle
+  sanitizado está limitado al modo desarrollador.
+- `tools/catalog_migration/` es una herramienta de desarrollo para convertir
+  Excel a JSON; no se empaqueta dentro de Android ni forma parte del runtime.
+- CI no publica los Excel de origen ni datos de autenticación.
 
-## Documentación
-
-- [Alcance IA Flutter4](docs/IA_FLUTTER4_SCOPE.md)
-- [Alcance IA Flutter5](docs/IA_FLUTTER5_SCOPE.md)
-- [Matriz real IA Flutter5](docs/IA_FLUTTER5_REAL_VALIDATION_MATRIX.md)
-- [Resultados reales IA Flutter5](docs/IA_FLUTTER5_REAL_RESULTS.md)
-- [Arquitectura](docs/ARCHITECTURE.md)
-- [Decisión técnica WebView](docs/WEBVIEW_TECHNICAL_DECISION.md)
-- [Motor de automatización](docs/AUTOMATION_ENGINE.md)
-- [Seguridad](docs/SECURITY.md)
-- [Plan de pruebas WebView](docs/WEBVIEW_TEST_PLAN.md)
-
-Los documentos heredados sobre agente Windows o API describen alternativas obsoletas y no forman parte de la arquitectura operativa IA Flutter4.
-
-## Validación
+## Verificación
 
 ```powershell
 dart format --output=none --set-exit-if-changed .
@@ -94,6 +75,29 @@ flutter analyze
 flutter test
 flutter build apk --debug
 flutter build appbundle --debug
+python tools/catalog_migration/validate_catalog_assets.py
 ```
 
-CI nunca abre Automy real y el repositorio no contiene URL privada, secretos ni credenciales.
+La línea base documentada pasó formato, análisis, 60 pruebas, APK y AAB antes
+de esta consolidación. En el árbol actual, formato, `flutter analyze`, las 75
+pruebas, APK debug, AAB debug y la validación de catálogos IA1 pasaron
+localmente. La comprobación manual en Galaxy A26 y la ejecución remota de CI
+siguen pendientes; consulta [VALIDATION.md](docs/VALIDATION.md).
+
+## Documentación
+
+- [Línea base de paridad](docs/PARITY_BASELINE.md)
+- [Grafo de providers](docs/PROVIDER_DEPENDENCY_GRAPH.md)
+- [Matriz de paridad Desktop–Mobile](docs/DESKTOP_MOBILE_PARITY_MATRIX.md)
+- [Informe de migración del catálogo IA1](docs/CATALOG_MIGRATION_REPORT.md)
+- [Modelo de dominio](docs/DOMAIN_MODEL.md)
+- [Validación de pedidos](docs/ORDER_VALIDATION.md)
+- [Reglas de comodatos](docs/COMODATO_RULES.md)
+- [Formato y persistencia de perfiles](docs/PROFILE_FORMAT.md)
+- [Validación en Galaxy A26](docs/GALAXY_A26_VALIDATION.md)
+- [Alcance de Mercado](docs/MERCADO_MOBILE_SCOPE.md)
+- [Evidencia de validación y CI](docs/VALIDATION.md)
+
+Los documentos históricos de IA Flutter4/5 describen iteraciones anteriores;
+esta documentación de paridad IA1 prevalece para el alcance actual cuando haya
+diferencias.

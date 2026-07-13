@@ -3,7 +3,7 @@ name: Flutter CI
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, validation/automy-real-webview]
   pull_request:
     branches: [main]
 
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Formato, pruebas y APK IA Flutter4
+    name: Formato, catálogos, pruebas y Android
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -30,11 +30,19 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Configurar Python para validar catálogos
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Instalar dependencias
         run: flutter pub get
 
       - name: Verificar formato
         run: dart format --output=none --set-exit-if-changed .
+
+      - name: Validar catálogo IA1 y manifiesto
+        run: python tools/catalog_migration/validate_catalog_assets.py
 
       - name: Analizar
         run: flutter analyze
@@ -48,10 +56,26 @@ jobs:
       - name: Compilar AAB Android de depuración
         run: flutter build appbundle --debug
 
-      - name: Publicar APK IA Flutter5
+      - name: Publicar APK de paridad IA1
         uses: actions/upload-artifact@v4
         with:
-          name: interautomy-mobile-ia-flutter5-debug
+          name: interautomy-mobile-parity-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Publicar AAB de paridad IA1
+        uses: actions/upload-artifact@v4
+        with:
+          name: interautomy-mobile-parity-debug-aab
+          path: build/app/outputs/bundle/debug/app-debug.aab
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Publicar informe de migración
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-migration-report
+          path: docs/CATALOG_MIGRATION_REPORT.md
           if-no-files-found: error
           retention-days: 7
