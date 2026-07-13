@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../domain/entities/catalog_readiness.dart';
 import '../../../domain/entities/comodato.dart';
 import '../../../domain/entities/product.dart';
 import '../../../domain/services/comodato_resolution_service.dart';
@@ -182,7 +183,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 return SliverGrid(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: columns,
-                    mainAxisExtent: 280,
+                    mainAxisExtent: 318,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
@@ -300,6 +301,8 @@ class _ProductCard extends StatelessWidget {
                   : 'Código no disponible en el maestro IA1',
               style: Theme.of(context).textTheme.labelLarge,
             ),
+            const SizedBox(height: 6),
+            _ReadinessChip(readiness: product.readiness),
             const SizedBox(height: 8),
             Text(
               product.linea.nombre,
@@ -465,7 +468,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                         child: Text(
                           product.hasVerifiedCode
                               ? '${product.codigo} · ${product.nombre}'
-                              : product.nombre,
+                              : '${product.nombre} · ${product.readiness.statusLabel}',
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -541,6 +544,36 @@ class _AddProductSheetState extends State<_AddProductSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ReadinessChip extends StatelessWidget {
+  const _ReadinessChip({required this.readiness});
+
+  final CatalogReadiness readiness;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final (icon, color) = switch (readiness) {
+      CatalogReadiness.complete => (
+        Icons.check_circle_outline,
+        colorScheme.primary,
+      ),
+      CatalogReadiness.notExecutable => (
+        Icons.block_outlined,
+        colorScheme.error,
+      ),
+      _ => (Icons.warning_amber_outlined, colorScheme.tertiary),
+    };
+    return Tooltip(
+      message: readiness.reasonLabel,
+      child: Chip(
+        visualDensity: VisualDensity.compact,
+        avatar: Icon(icon, size: 18, color: color),
+        label: Text(readiness.statusLabel),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../automation/upload/file_picker_service.dart';
+import '../../../domain/entities/catalog_readiness.dart';
 import '../../../domain/entities/client.dart';
 import '../../../domain/entities/institution.dart';
 import '../../../domain/entities/order_profile.dart';
@@ -403,7 +404,10 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                       ...appState.clients.map(
                         (item) => DropdownMenuItem(
                           value: item.id,
-                          child: Text(item.nombre),
+                          child: Text(
+                            '${item.nombre} · ${item.readiness.statusLabel}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                       const DropdownMenuItem(
@@ -429,6 +433,26 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                     },
                   ),
                   const SizedBox(height: 8),
+                  if (client != null)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Tooltip(
+                        message: client.readiness.reasonLabel,
+                        child: Chip(
+                          key: const Key('client-readiness'),
+                          avatar: Icon(
+                            client.readiness == CatalogReadiness.complete
+                                ? Icons.check_circle_outline
+                                : client.readiness ==
+                                      CatalogReadiness.notExecutable
+                                ? Icons.block_outlined
+                                : Icons.warning_amber_outlined,
+                            size: 18,
+                          ),
+                          label: Text(client.readiness.statusLabel),
+                        ),
+                      ),
+                    ),
                   Align(
                     alignment: Alignment.centerRight,
                     child: OutlinedButton.icon(

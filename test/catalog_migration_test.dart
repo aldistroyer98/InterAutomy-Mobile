@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:interautomy_mobile/data/catalogs/asset_catalog_loader.dart';
 import 'package:interautomy_mobile/data/repositories/asset_catalog_repositories.dart';
 import 'package:interautomy_mobile/domain/entities/product.dart';
+import 'package:interautomy_mobile/domain/entities/catalog_readiness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,17 @@ void main() {
         isTrue,
       );
       final first = products.first;
+      expect(first.readiness, CatalogReadiness.missingCommercialCode);
+      expect(first.executable, isFalse);
+      expect(
+        first.missingFields,
+        containsAll(<String>[
+          'commercialCode',
+          'price',
+          'presentation',
+          'category',
+        ]),
+      );
       expect(
         SelectedProduct.fromCatalog(first, id: 'one').duplicateKey,
         SelectedProduct.fromCatalog(first, id: 'two').duplicateKey,

@@ -5,7 +5,6 @@ import 'package:interautomy_mobile/domain/entities/comodato.dart';
 import 'package:interautomy_mobile/domain/entities/product.dart';
 import 'package:interautomy_mobile/domain/services/comodato_resolution_service.dart';
 import 'package:interautomy_mobile/domain/services/order_validation_service.dart';
-import 'package:interautomy_mobile/domain/validation/validation_result.dart';
 
 SelectedProduct _product({double price = 12.5, Comodato? comodato}) =>
     SelectedProduct.fromCatalog(
@@ -81,12 +80,14 @@ void main() {
       );
       expect(
         result.errors.map((issue) => issue.code),
-        contains('PRICE_REQUIRED'),
+        containsAll(<String>[
+          'PRICE_REQUIRED',
+          'COMMERCIAL_CODE_REQUIRED',
+          'PRESENTATION_REQUIRED',
+          'CATEGORY_REQUIRED',
+        ]),
       );
-      expect(
-        result.warnings.map((issue) => issue.severity),
-        everyElement(ValidationSeverity.warning),
-      );
+      expect(result.warnings, isEmpty);
     },
   );
 

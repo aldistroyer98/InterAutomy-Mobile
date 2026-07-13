@@ -1,4 +1,5 @@
 import 'comodato.dart';
+import 'catalog_readiness.dart';
 
 final class Client {
   const Client({
@@ -60,6 +61,40 @@ final class Client {
   final Map<String, List<Comodato>> comodatosPorLinea;
 
   bool get hasArchivoOc => archivoOc.trim().isNotEmpty;
+
+  List<String> get missingFields => List.unmodifiable([
+    if (id.trim().isEmpty) 'id',
+    if (nombre.trim().isEmpty) 'name',
+    if (institutionId.trim().isEmpty && institucion.trim().isEmpty)
+      'institution',
+    if (departamento.trim().isEmpty) 'department',
+    if (provincia.trim().isEmpty) 'province',
+    if (distrito.trim().isEmpty) 'district',
+    if (direccion.trim().isEmpty) 'address',
+    if (contacto.trim().isEmpty) 'contact',
+    if (telefono.replaceAll(RegExp(r'\D'), '').length < 7) 'phone',
+  ]);
+
+  CatalogReadiness get readiness {
+    final missing = missingFields;
+    if (missing.contains('id') || missing.contains('name')) {
+      return CatalogReadiness.notExecutable;
+    }
+    if (missing.contains('institution')) {
+      return CatalogReadiness.missingInstitution;
+    }
+    return missing.isEmpty
+        ? CatalogReadiness.complete
+        : CatalogReadiness.notExecutable;
+  }
+
+  List<String> get warnings => List.unmodifiable(
+    missingFields.map(
+      (field) => 'Falta completar el campo de cliente: $field.',
+    ),
+  );
+
+  bool get executable => missingFields.isEmpty;
 
   Client copyWith({
     String? id,

@@ -1,4 +1,5 @@
 import 'comodato.dart';
+import 'catalog_readiness.dart';
 import 'commercial_line.dart';
 
 final class CatalogProduct {
@@ -41,6 +42,27 @@ final class CatalogProduct {
   final bool hasVerifiedCategory;
   final bool comodatoValid;
   final bool sinComodato;
+
+  List<String> get missingFields => _missingProductFields(
+    id: id,
+    code: codigo,
+    name: nombre,
+    line: linea,
+    presentation: presentacion,
+    price: precio,
+    category: categoria,
+    hasVerifiedCode: hasVerifiedCode,
+    hasVerifiedPrice: hasVerifiedPrice,
+    hasVerifiedPresentation: hasVerifiedPresentation,
+    hasVerifiedCategory: hasVerifiedCategory,
+    comodatoValid: comodatoValid,
+  );
+
+  CatalogReadiness get readiness => _productReadiness(missingFields);
+
+  List<String> get warnings => _productWarnings(missingFields);
+
+  bool get executable => missingFields.isEmpty;
 }
 
 final class SelectedProduct {
@@ -114,6 +136,30 @@ final class SelectedProduct {
   final bool comodatoValid;
   final bool sinComodato;
 
+  List<String> get missingFields => _missingProductFields(
+    id: id,
+    code: codigo,
+    name: nombre,
+    line: linea,
+    presentation: presentacion,
+    price: precio,
+    category: categoria,
+    hasVerifiedCode: hasVerifiedCode,
+    hasVerifiedPrice: hasVerifiedPrice,
+    hasVerifiedPresentation: hasVerifiedPresentation,
+    hasVerifiedCategory: hasVerifiedCategory,
+    comodatoValid: comodatoValid,
+    quantity: cantidad,
+    comodatoRequired: requiereComodato,
+    hasComodato: comodato != null,
+  );
+
+  CatalogReadiness get readiness => _productReadiness(missingFields);
+
+  List<String> get warnings => _productWarnings(missingFields);
+
+  bool get executable => missingFields.isEmpty;
+
   double get subtotal => precio * cantidad;
 
   String get duplicateKey => [
@@ -156,3 +202,57 @@ final class SelectedProduct {
     );
   }
 }
+
+List<String> _missingProductFields({
+  required String id,
+  required String code,
+  required String name,
+  required CommercialLine line,
+  required String presentation,
+  required double price,
+  required String category,
+  required bool hasVerifiedCode,
+  required bool hasVerifiedPrice,
+  required bool hasVerifiedPresentation,
+  required bool hasVerifiedCategory,
+  required bool comodatoValid,
+  int? quantity,
+  bool comodatoRequired = false,
+  bool hasComodato = false,
+}) => List.unmodifiable([
+  if (id.trim().isEmpty) 'id',
+  if (name.trim().isEmpty) 'name',
+  if (!hasVerifiedCode || code.trim().isEmpty) 'commercialCode',
+  if (line.id.trim().isEmpty || line.nombre.trim().isEmpty) 'line',
+  if (!hasVerifiedPrice || price <= 0) 'price',
+  if (!hasVerifiedPresentation || presentation.trim().isEmpty) 'presentation',
+  if (!hasVerifiedCategory || category.trim().isEmpty) 'category',
+  if (quantity != null && quantity <= 0) 'quantity',
+  if (comodatoRequired && !hasComodato) 'comodato',
+  if (!comodatoValid) 'comodatoMetadata',
+]);
+
+CatalogReadiness _productReadiness(List<String> missing) {
+  if (missing.contains('id') ||
+      missing.contains('name') ||
+      missing.contains('quantity')) {
+    return CatalogReadiness.notExecutable;
+  }
+  if (missing.contains('commercialCode')) {
+    return CatalogReadiness.missingCommercialCode;
+  }
+  if (missing.contains('price')) return CatalogReadiness.missingPrice;
+  if (missing.contains('line')) return CatalogReadiness.missingLine;
+  if (missing.contains('presentation')) {
+    return CatalogReadiness.missingPresentation;
+  }
+  if (missing.contains('category')) return CatalogReadiness.missingCategory;
+  if (missing.contains('comodato') || missing.contains('comodatoMetadata')) {
+    return CatalogReadiness.missingComodatoMetadata;
+  }
+  return CatalogReadiness.complete;
+}
+
+List<String> _productWarnings(List<String> missing) => List.unmodifiable(
+  missing.map((field) => 'Falta completar el campo de producto: $field.'),
+);

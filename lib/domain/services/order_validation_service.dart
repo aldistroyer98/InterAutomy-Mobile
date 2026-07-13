@@ -23,18 +23,6 @@ final class OrderValidationService {
       );
     }
 
-    void warning(String code, String field, String message, String action) {
-      issues.add(
-        ValidationIssue(
-          code: code,
-          field: field,
-          message: message,
-          severity: ValidationSeverity.warning,
-          correctiveAction: action,
-        ),
-      );
-    }
-
     if (client == null ||
         client.id.trim().isEmpty ||
         client.nombre.trim().isEmpty) {
@@ -163,7 +151,7 @@ final class OrderValidationService {
     for (var index = 0; index < products.length; index++) {
       final product = products[index];
       final row = index + 1;
-      if (product.nombre.trim().isEmpty) {
+      if (product.id.trim().isEmpty || product.nombre.trim().isEmpty) {
         error(
           'PRODUCT_INVALID',
           'products[$index].product',
@@ -195,6 +183,31 @@ final class OrderValidationService {
           'Registra el precio autorizado antes de ejecutar.',
         );
       }
+      if (!product.hasVerifiedCode || product.codigo.trim().isEmpty) {
+        error(
+          'COMMERCIAL_CODE_REQUIRED',
+          'products[$index].code',
+          'Fila $row: falta un código comercial verificable.',
+          'Registra el código desde una fuente comercial autorizada.',
+        );
+      }
+      if (!product.hasVerifiedPresentation ||
+          product.presentacion.trim().isEmpty) {
+        error(
+          'PRESENTATION_REQUIRED',
+          'products[$index].presentation',
+          'Fila $row: falta la presentación verificable.',
+          'Registra la presentación desde una fuente autorizada.',
+        );
+      }
+      if (!product.hasVerifiedCategory || product.categoria.trim().isEmpty) {
+        error(
+          'CATEGORY_REQUIRED',
+          'products[$index].category',
+          'Fila $row: falta la categoría verificable.',
+          'Registra la categoría desde una fuente autorizada.',
+        );
+      }
       if (product.requiereComodato && product.comodato == null) {
         error(
           'COMODATO_REQUIRED',
@@ -209,22 +222,6 @@ final class OrderValidationService {
           'products[$index].comodato',
           'Fila $row: el comodato no pertenece al cliente y línea seleccionados.',
           'Selecciona un comodato permitido o usa la resolución automática.',
-        );
-      }
-      if (!product.hasVerifiedCode) {
-        warning(
-          'PRODUCT_CODE_UNAVAILABLE',
-          'products[$index].code',
-          'Fila $row: IA1 no aporta un codigo de producto verificable.',
-          'Valida el codigo con el catalogo autorizado.',
-        );
-      }
-      if (!product.hasVerifiedPresentation || !product.hasVerifiedCategory) {
-        warning(
-          'PRODUCT_DETAILS_UNAVAILABLE',
-          'products[$index]',
-          'Fila $row: presentacion o categoria no estan disponibles en IA1.',
-          'Completa solo datos autorizados por el responsable comercial.',
         );
       }
     }
