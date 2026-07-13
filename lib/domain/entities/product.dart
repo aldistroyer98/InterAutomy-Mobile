@@ -15,6 +15,12 @@ final class CatalogProduct {
     this.comodato,
     this.expiracion,
     this.requiereComodato = false,
+    this.hasVerifiedCode = true,
+    this.hasVerifiedPrice = true,
+    this.hasVerifiedPresentation = true,
+    this.hasVerifiedCategory = true,
+    this.comodatoValid = true,
+    this.sinComodato = false,
   });
 
   final String id;
@@ -29,6 +35,12 @@ final class CatalogProduct {
   final Comodato? comodato;
   final DateTime? expiracion;
   final bool requiereComodato;
+  final bool hasVerifiedCode;
+  final bool hasVerifiedPrice;
+  final bool hasVerifiedPresentation;
+  final bool hasVerifiedCategory;
+  final bool comodatoValid;
+  final bool sinComodato;
 }
 
 final class SelectedProduct {
@@ -45,6 +57,12 @@ final class SelectedProduct {
     this.comodato,
     this.expiracion,
     this.requiereComodato = false,
+    this.hasVerifiedCode = true,
+    this.hasVerifiedPrice = true,
+    this.hasVerifiedPresentation = true,
+    this.hasVerifiedCategory = true,
+    this.comodatoValid = true,
+    this.sinComodato = false,
   });
 
   factory SelectedProduct.fromCatalog(
@@ -52,6 +70,8 @@ final class SelectedProduct {
     required String id,
     int cantidad = 1,
     Comodato? comodato,
+    bool comodatoValid = true,
+    bool sinComodato = false,
   }) {
     return SelectedProduct(
       id: id,
@@ -66,6 +86,12 @@ final class SelectedProduct {
       comodato: comodato ?? product.comodato,
       expiracion: product.expiracion,
       requiereComodato: product.requiereComodato,
+      hasVerifiedCode: product.hasVerifiedCode,
+      hasVerifiedPrice: product.hasVerifiedPrice,
+      hasVerifiedPresentation: product.hasVerifiedPresentation,
+      hasVerifiedCategory: product.hasVerifiedCategory,
+      comodatoValid: comodatoValid,
+      sinComodato: sinComodato,
     );
   }
 
@@ -81,11 +107,19 @@ final class SelectedProduct {
   final Comodato? comodato;
   final DateTime? expiracion;
   final bool requiereComodato;
+  final bool hasVerifiedCode;
+  final bool hasVerifiedPrice;
+  final bool hasVerifiedPresentation;
+  final bool hasVerifiedCategory;
+  final bool comodatoValid;
+  final bool sinComodato;
 
   double get subtotal => precio * cantidad;
 
   String get duplicateKey => [
-    codigo.trim().toLowerCase(),
+    (hasVerifiedCode && codigo.trim().isNotEmpty ? codigo : nombre)
+        .trim()
+        .toLowerCase(),
     linea.id.trim().toLowerCase(),
     comodato?.codigo.trim().toLowerCase() ?? '',
   ].join('|');
@@ -97,6 +131,8 @@ final class SelectedProduct {
     Comodato? comodato,
     bool clearComodato = false,
     DateTime? expiracion,
+    bool? comodatoValid,
+    bool? sinComodato,
   }) {
     return SelectedProduct(
       id: id ?? this.id,
@@ -111,6 +147,12 @@ final class SelectedProduct {
       comodato: clearComodato ? null : comodato ?? this.comodato,
       expiracion: expiracion ?? this.expiracion,
       requiereComodato: requiereComodato,
+      hasVerifiedCode: hasVerifiedCode,
+      hasVerifiedPrice: hasVerifiedPrice,
+      hasVerifiedPresentation: hasVerifiedPresentation,
+      hasVerifiedCategory: hasVerifiedCategory,
+      comodatoValid: comodatoValid ?? this.comodatoValid,
+      sinComodato: sinComodato ?? this.sinComodato,
     );
   }
 }

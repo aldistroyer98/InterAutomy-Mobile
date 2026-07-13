@@ -11,7 +11,6 @@ import '../../../automation/detection/page_detector.dart';
 import '../../../automation/webview/portal_diagnostics.dart';
 import '../../../automation/webview_automation_gateway.dart';
 import '../../../core/security/webview_security_policy.dart';
-import '../../../state/app_controller.dart';
 import '../../../state/providers.dart';
 
 class PortalScreen extends ConsumerStatefulWidget {
@@ -154,7 +153,7 @@ class _PortalScreenState extends ConsumerState<PortalScreen>
   void _onPageStarted(String url) {
     _loadTimer?.cancel();
     _gateway.webController.pageStarted(url);
-    final seconds = ref.read(appControllerProvider).settings.loadTimeoutSeconds;
+    final seconds = ref.read(settingsControllerProvider).loadTimeoutSeconds;
     _loadTimer = Timer(Duration(seconds: seconds), () {
       _gateway.webController.webError('Timeout de carga del portal.');
       _gateway.recordNetworkError(
@@ -165,11 +164,11 @@ class _PortalScreenState extends ConsumerState<PortalScreen>
   }
 
   Future<void> _authorizeHost(Uri uri) async {
-    final state = ref.read(appControllerProvider);
-    final hosts = {...state.settings.additionalAllowedHosts, uri.host}.toList()
+    final settings = ref.read(settingsControllerProvider);
+    final hosts = {...settings.additionalAllowedHosts, uri.host}.toList()
       ..sort();
-    final updated = state.settings.copyWith(additionalAllowedHosts: hosts);
-    await ref.read(appControllerProvider.notifier).updateSettings(updated);
+    final updated = settings.copyWith(additionalAllowedHosts: hosts);
+    await ref.read(settingsControllerProvider.notifier).update(updated);
     final policy = WebViewSecurityPolicy(
       portalUrl: WebViewSecurityPolicy.parsePortalUrl(updated.portalUrl),
       additionalHosts: updated.additionalAllowedHosts,
@@ -226,7 +225,7 @@ class _PortalScreenState extends ConsumerState<PortalScreen>
   }
 
   Future<void> _configure() async {
-    final settings = ref.read(appControllerProvider).settings;
+    final settings = ref.read(settingsControllerProvider);
     final policy = WebViewSecurityPolicy(
       portalUrl: WebViewSecurityPolicy.parsePortalUrl(settings.portalUrl),
       additionalHosts: settings.additionalAllowedHosts,
@@ -313,8 +312,7 @@ class _PortalScreenState extends ConsumerState<PortalScreen>
 
   @override
   Widget build(BuildContext context) {
-    final appState = ref.watch(appControllerProvider);
-    final settings = appState.settings;
+    final settings = ref.watch(settingsControllerProvider);
     if (!settings.hasPortalConfiguration) {
       return Scaffold(
         appBar: AppBar(title: const Text('Automy integrado')),

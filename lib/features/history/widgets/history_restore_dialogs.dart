@@ -101,3 +101,41 @@ Future<void> restoreHistoryFlow(
   ).showSnackBar(SnackBar(content: Text('Se restauraron $count producto(s).')));
   context.go('/products');
 }
+
+Future<void> deleteHistoryFlow(
+  BuildContext context,
+  WidgetRef ref,
+  HistoryRecord record,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Eliminar registro'),
+      content: Text(
+        '¿Eliminar del historial la ejecución de ${record.clientName}? Esta acción no se puede deshacer.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Eliminar'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+  final deleted = await ref
+      .read(appControllerProvider.notifier)
+      .deleteHistory(record.executionId);
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        deleted ? 'Registro eliminado.' : 'No se pudo eliminar el registro.',
+      ),
+    ),
+  );
+}

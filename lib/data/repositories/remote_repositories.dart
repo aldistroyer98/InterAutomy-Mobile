@@ -33,6 +33,9 @@ final class RemoteClientRepository
   Future<Client?> getById(String id) async => disabled();
 
   @override
+  Future<List<Client>> search(String query) async => disabled();
+
+  @override
   Future<Client> save(Client client) async => disabled();
 }
 
@@ -86,6 +89,9 @@ final class RemoteHistoryRepository
 
   @override
   Future<void> save(HistoryRecord record) async => disabled();
+
+  @override
+  Future<void> delete(String executionId) async => disabled();
 
   @override
   Future<List<HistoryRecord>> search({

@@ -8,7 +8,6 @@ import '../../../automation/logging/automation_log_sanitizer.dart';
 import '../../../automation/webview/portal_diagnostics.dart';
 import '../../../automation/webview_automation_gateway.dart';
 import '../../../core/security/webview_security_policy.dart';
-import '../../../state/app_controller.dart';
 import '../../../state/providers.dart';
 
 class WebInspectorScreen extends ConsumerStatefulWidget {
@@ -70,9 +69,7 @@ class _WebInspectorScreenState extends ConsumerState<WebInspectorScreen> {
                     FilledButton.icon(
                       key: const Key('open-real-portal'),
                       onPressed: () {
-                        final settings = ref
-                            .read(appControllerProvider)
-                            .settings;
+                        final settings = ref.read(settingsControllerProvider);
                         if (!settings.hasPortalConfiguration) {
                           context.go('/settings');
                         } else {

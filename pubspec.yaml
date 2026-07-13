@@ -10,9 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
   collection: ^1.19.1
+  crypto: ^3.0.6
   dio: ^5.9.0
   flutter_riverpod: ^3.0.3
-  flutter_secure_storage: ^10.0.0
   go_router: ^16.3.0
   intl: ^0.20.2
   package_info_plus: ^10.2.0
@@ -35,4 +35,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/automation/
+    - assets/catalogs/
     - test/fixtures/webview/

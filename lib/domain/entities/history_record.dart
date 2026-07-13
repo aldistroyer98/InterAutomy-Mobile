@@ -1,4 +1,5 @@
 import 'execution.dart';
+import 'client.dart';
 import 'product.dart';
 
 final class HistoryRecord {
@@ -11,9 +12,16 @@ final class HistoryRecord {
     required this.createdAt,
     required this.status,
     required this.products,
+    this.clientSnapshot,
+    this.executionMode = 'Demo',
+    this.result = '',
+    this.totalSnapshot,
   });
 
-  factory HistoryRecord.fromExecution(Execution execution) => HistoryRecord(
+  factory HistoryRecord.fromExecution(
+    Execution execution, {
+    required String executionMode,
+  }) => HistoryRecord(
     id: execution.id,
     executionId: execution.id,
     clientId: execution.cliente.id,
@@ -24,6 +32,10 @@ final class HistoryRecord {
     createdAt: execution.updatedAt,
     status: execution.estado,
     products: List.unmodifiable(execution.productos),
+    clientSnapshot: execution.cliente,
+    executionMode: executionMode,
+    result: execution.mensajeError ?? execution.estado.label,
+    totalSnapshot: execution.total,
   );
 
   final String id;
@@ -34,4 +46,12 @@ final class HistoryRecord {
   final DateTime createdAt;
   final ExecutionStatus status;
   final List<SelectedProduct> products;
+  final Client? clientSnapshot;
+  final String executionMode;
+  final String result;
+  final double? totalSnapshot;
+
+  double get total =>
+      totalSnapshot ??
+      products.fold(0, (sum, product) => sum + product.subtotal);
 }

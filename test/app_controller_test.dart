@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:interautomy_mobile/data/local/local_domain_store.dart';
 import 'package:interautomy_mobile/domain/entities/execution.dart';
 import 'package:interautomy_mobile/domain/entities/history_record.dart';
+import 'package:interautomy_mobile/domain/entities/institution.dart';
 import 'package:interautomy_mobile/features/history/application/restore_mode.dart';
 import 'package:interautomy_mobile/state/app_controller.dart';
 import 'package:interautomy_mobile/state/providers.dart';
@@ -15,6 +17,9 @@ void main() {
     container = ProviderContainer(
       overrides: [
         settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+        localDomainStoreProvider.overrideWithValue(
+          LocalDomainStore(backend: InMemoryLocalDomainStoreBackend()),
+        ),
       ],
     );
     await container.read(appControllerProvider.notifier).initialize();
@@ -120,17 +125,52 @@ void main() {
     final repository =
         container.read(settingsRepositoryProvider) as FakeSettingsRepository;
     final settings = container
-        .read(appControllerProvider)
-        .settings
+        .read(settingsControllerProvider)
         .copyWith(demoMode: false, portalUrl: 'https://automy.example.test');
-    await container
-        .read(appControllerProvider.notifier)
-        .updateSettings(settings);
+    await container.read(settingsControllerProvider.notifier).update(settings);
     expect(repository.settings.portalUrl, 'https://automy.example.test');
-    expect(container.read(appControllerProvider).settings.demoMode, isFalse);
+    expect(container.read(settingsControllerProvider).demoMode, isFalse);
     expect(
-      await container.read(appControllerProvider.notifier).startExecution(),
-      isNotEmpty,
+      (await container.read(appControllerProvider.notifier).startExecution())
+          .valid,
+      isFalse,
     );
+  });
+
+  test('institución local y perfil restauran el pedido completo', () async {
+    final controller = container.read(appControllerProvider.notifier);
+    const institution = Institution(
+      id: 'institution-local',
+      nombre: 'Institución local',
+      departamento: 'Lima',
+      provincia: 'Lima',
+      distrito: 'San Borja',
+      direccion: 'Av. Principal 100',
+      contacto: 'Responsable local',
+      telefono: '999 888 777',
+    );
+    expect(await controller.saveInstitution(institution), isTrue);
+    final selected = container.read(appControllerProvider).selectedClient!;
+    expect(selected.institutionId, institution.id);
+    expect(selected.institucion, institution.nombre);
+    expect(selected.direccion, institution.direccion);
+
+    controller.addCatalogProduct(
+      container.read(appControllerProvider).catalog.first,
+    );
+    expect(await controller.saveProfile('Perfil de prueba'), isTrue);
+    final profile = container.read(appControllerProvider).profiles.single;
+
+    controller.createNewClientDraft();
+    expect(
+      container.read(appControllerProvider).selectedProducts,
+      hasLength(1),
+    );
+    controller.loadProfile(profile);
+    final restored = container.read(appControllerProvider);
+    expect(restored.selectedClient?.institutionId, institution.id);
+    expect(restored.selectedProducts, hasLength(1));
+    expect(await controller.deleteProfile(profile.id), isTrue);
+    expect(container.read(appControllerProvider).profiles, isEmpty);
   });
 }

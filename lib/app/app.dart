@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/entities/app_settings.dart';
 import '../state/app_controller.dart';
+import '../state/settings_controller.dart';
 import 'app_config.dart';
 import 'app_router.dart';
 import 'app_theme.dart';
@@ -25,7 +26,8 @@ class _InterAutomyAppState extends ConsumerState<InterAutomyApp> {
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     final appState = ref.watch(appControllerProvider);
-    final themeMode = switch (appState.settings.theme) {
+    final settings = ref.watch(settingsControllerProvider);
+    final themeMode = switch (settings.theme) {
       AppThemePreference.system => ThemeMode.system,
       AppThemePreference.light => ThemeMode.light,
       AppThemePreference.dark => ThemeMode.dark,

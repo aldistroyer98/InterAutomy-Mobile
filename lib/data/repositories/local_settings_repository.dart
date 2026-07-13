@@ -1,16 +1,13 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/app_settings.dart';
+import '../../domain/entities/catalog_source.dart';
 import '../../domain/repositories/api_configuration_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 
 final class LocalSettingsRepository
     implements SettingsRepository, ApiConfigurationRepository {
-  LocalSettingsRepository({
-    required this.defaultPortalUrl,
-    FlutterSecureStorage? secureStorage,
-  }) : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  LocalSettingsRepository({required this.defaultPortalUrl});
 
   static const _demoKey = 'settings.demo_mode';
   static const _portalKey = 'settings.portal_url';
@@ -22,10 +19,9 @@ final class LocalSettingsRepository
   static const _loadTimeoutKey = 'settings.load_timeout_seconds';
   static const _selectorTimeoutKey = 'settings.selector_timeout_seconds';
   static const _themeKey = 'settings.theme';
-  static const _futureTokenKey = 'future_api_token';
+  static const _catalogSourceKey = 'settings.catalog_source';
 
   final String defaultPortalUrl;
-  final FlutterSecureStorage _secureStorage;
 
   @override
   Future<AppSettings> load() async {
@@ -34,6 +30,11 @@ final class LocalSettingsRepository
     final theme = AppThemePreference.values.firstWhere(
       (value) => value.name == themeName,
       orElse: () => AppThemePreference.system,
+    );
+    final catalogSourceName = preferences.getString(_catalogSourceKey);
+    final catalogSource = CatalogSource.values.firstWhere(
+      (value) => value.name == catalogSourceName,
+      orElse: () => CatalogSource.demo,
     );
     return AppSettings(
       demoMode: preferences.getBool(_demoKey) ?? true,
@@ -48,6 +49,7 @@ final class LocalSettingsRepository
       persistSession: preferences.getBool(_persistSessionKey) ?? true,
       loadTimeoutSeconds: preferences.getInt(_loadTimeoutKey) ?? 45,
       selectorTimeoutSeconds: preferences.getInt(_selectorTimeoutKey) ?? 12,
+      catalogSource: catalogSource,
       theme: theme,
     );
   }
@@ -67,6 +69,7 @@ final class LocalSettingsRepository
       preferences.setBool(_persistSessionKey, settings.persistSession),
       preferences.setInt(_loadTimeoutKey, settings.loadTimeoutSeconds),
       preferences.setInt(_selectorTimeoutKey, settings.selectorTimeoutSeconds),
+      preferences.setString(_catalogSourceKey, settings.catalogSource.name),
       preferences.setString(_themeKey, settings.theme.name),
     ]);
   }
@@ -79,12 +82,4 @@ final class LocalSettingsRepository
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(_portalKey, value);
   }
-
-  @override
-  Future<String?> readFutureToken() =>
-      _secureStorage.read(key: _futureTokenKey);
-
-  @override
-  Future<void> saveFutureToken(String token) =>
-      _secureStorage.write(key: _futureTokenKey, value: token);
 }

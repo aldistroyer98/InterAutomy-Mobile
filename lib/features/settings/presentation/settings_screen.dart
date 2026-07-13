@@ -6,6 +6,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../../app/app_config.dart';
 import '../../../core/security/webview_security_policy.dart';
 import '../../../domain/entities/app_settings.dart';
+import '../../../domain/entities/catalog_source.dart';
 import '../../../state/app_controller.dart';
 import '../../../state/providers.dart';
 
@@ -66,8 +67,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _hostsController.text,
     )!;
     await ref
-        .read(appControllerProvider.notifier)
-        .updateSettings(
+        .read(settingsControllerProvider.notifier)
+        .update(
           settings.copyWith(portalUrl: portal, additionalAllowedHosts: hosts),
         );
     if (mounted) {
@@ -110,8 +111,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (confirmed != true || !mounted) return;
     }
     await ref
-        .read(appControllerProvider.notifier)
-        .updateSettings(settings.copyWith(demoMode: enabled));
+        .read(settingsControllerProvider.notifier)
+        .update(settings.copyWith(demoMode: enabled));
   }
 
   Future<void> _clearSession() async {
@@ -124,15 +125,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Future<void> _changeCatalogSource(
+    AppSettings settings,
+    CatalogSource source,
+  ) async {
+    if (source == settings.catalogSource) return;
+    await ref
+        .read(settingsControllerProvider.notifier)
+        .update(settings.copyWith(catalogSource: source));
+    await ref.read(appControllerProvider.notifier).reloadCatalogs();
+    if (!mounted) return;
+    final state = ref.read(appControllerProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          state.errorCode == 'CATALOG_LOAD_FAILED'
+              ? 'Catalogo IA1 no disponible.'
+              : 'Fuente de datos actualizada: ${source.label}.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(appControllerProvider).settings;
+    final settings = ref.watch(settingsControllerProvider);
     _sync(settings);
     return Form(
       key: _formKey,
       child: ListView(
         key: const PageStorageKey('settings-scroll'),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 112),
         children: [
           Card(
             child: Padding(
@@ -181,6 +204,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
+                    'Fuente de datos',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Demo incluye datos simulados. Catalogo IA1 contiene solo maestros migrados y verificables.',
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<CatalogSource>(
+                    key: const Key('catalog-source-selector'),
+                    segments: CatalogSource.values
+                        .map(
+                          (source) => ButtonSegment<CatalogSource>(
+                            value: source,
+                            icon: Icon(
+                              source == CatalogSource.demo
+                                  ? Icons.science_outlined
+                                  : Icons.inventory_2_outlined,
+                            ),
+                            label: Text(source.label),
+                          ),
+                        )
+                        .toList(growable: false),
+                    selected: {settings.catalogSource},
+                    onSelectionChanged: (selection) =>
+                        _changeCatalogSource(settings, selection.first),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
                     'Portal Automy',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
@@ -211,10 +273,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     value: settings.persistSession,
                     onChanged: (value) => ref
-                        .read(appControllerProvider.notifier)
-                        .updateSettings(
-                          settings.copyWith(persistSession: value),
-                        ),
+                        .read(settingsControllerProvider.notifier)
+                        .update(settings.copyWith(persistSession: value)),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -237,8 +297,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           onChanged: (value) {
                             if (value != null) {
                               ref
-                                  .read(appControllerProvider.notifier)
-                                  .updateSettings(
+                                  .read(settingsControllerProvider.notifier)
+                                  .update(
                                     settings.copyWith(
                                       loadTimeoutSeconds: value,
                                     ),
@@ -266,8 +326,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           onChanged: (value) {
                             if (value != null) {
                               ref
-                                  .read(appControllerProvider.notifier)
-                                  .updateSettings(
+                                  .read(settingsControllerProvider.notifier)
+                                  .update(
                                     settings.copyWith(
                                       selectorTimeoutSeconds: value,
                                     ),
@@ -331,8 +391,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   value: settings.developerMode,
                   onChanged: (value) => ref
-                      .read(appControllerProvider.notifier)
-                      .updateSettings(
+                      .read(settingsControllerProvider.notifier)
+                      .update(
                         settings.copyWith(
                           developerMode: value,
                           diagnosticMode: value
@@ -352,10 +412,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     value: settings.diagnosticMode,
                     onChanged: (value) => ref
-                        .read(appControllerProvider.notifier)
-                        .updateSettings(
-                          settings.copyWith(diagnosticMode: value),
-                        ),
+                        .read(settingsControllerProvider.notifier)
+                        .update(settings.copyWith(diagnosticMode: value)),
                   ),
                   const Divider(height: 1),
                   ListTile(
@@ -401,10 +459,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         .toList(growable: false),
                     selected: {settings.theme},
                     onSelectionChanged: (selection) => ref
-                        .read(appControllerProvider.notifier)
-                        .updateSettings(
-                          settings.copyWith(theme: selection.first),
-                        ),
+                        .read(settingsControllerProvider.notifier)
+                        .update(settings.copyWith(theme: selection.first)),
                   ),
                 ],
               ),

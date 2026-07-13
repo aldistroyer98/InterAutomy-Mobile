@@ -6,8 +6,11 @@ final class Client {
     required this.nombre,
     this.nroOc = '',
     this.archivoOc = '',
+    this.archivoOcNombre = '',
+    this.archivoOcMimeType = '',
     this.unidad = '',
     this.servicio = '',
+    this.institutionId = '',
     this.institucion = '',
     this.departamento = '',
     this.provincia = '',
@@ -30,9 +33,14 @@ final class Client {
   final String id;
   final String nombre;
   final String nroOc;
+
+  /// URI persistible de Storage Access Framework, nunca una copia del archivo.
   final String archivoOc;
+  final String archivoOcNombre;
+  final String archivoOcMimeType;
   final String unidad;
   final String servicio;
+  final String institutionId;
   final String institucion;
   final String departamento;
   final String provincia;
@@ -51,13 +59,18 @@ final class Client {
   final String motivo;
   final Map<String, List<Comodato>> comodatosPorLinea;
 
+  bool get hasArchivoOc => archivoOc.trim().isNotEmpty;
+
   Client copyWith({
     String? id,
     String? nombre,
     String? nroOc,
     String? archivoOc,
+    String? archivoOcNombre,
+    String? archivoOcMimeType,
     String? unidad,
     String? servicio,
+    String? institutionId,
     String? institucion,
     String? departamento,
     String? provincia,
@@ -81,8 +94,11 @@ final class Client {
       nombre: nombre ?? this.nombre,
       nroOc: nroOc ?? this.nroOc,
       archivoOc: archivoOc ?? this.archivoOc,
+      archivoOcNombre: archivoOcNombre ?? this.archivoOcNombre,
+      archivoOcMimeType: archivoOcMimeType ?? this.archivoOcMimeType,
       unidad: unidad ?? this.unidad,
       servicio: servicio ?? this.servicio,
+      institutionId: institutionId ?? this.institutionId,
       institucion: institucion ?? this.institucion,
       departamento: departamento ?? this.departamento,
       provincia: provincia ?? this.provincia,

@@ -116,6 +116,7 @@ class _HistoryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final date = DateFormat('dd/MM/yyyy · HH:mm').format(record.createdAt);
+    final currency = NumberFormat.currency(locale: 'es_PE', symbol: 'S/');
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -135,6 +136,8 @@ class _HistoryCard extends ConsumerWidget {
             ),
             Text(record.lineNames.join(', ')),
             const SizedBox(height: 4),
+            Text('${record.executionMode} · ${currency.format(record.total)}'),
+            Text(record.result),
             Text('$date · ${record.products.length} producto(s)'),
             const SizedBox(height: 12),
             Wrap(
@@ -156,6 +159,11 @@ class _HistoryCard extends ConsumerWidget {
                   onPressed: () =>
                       restoreHistoryFlow(context, ref, record, lineOnly: false),
                   child: const Text('Restaurar envío completo'),
+                ),
+                TextButton.icon(
+                  onPressed: () => deleteHistoryFlow(context, ref, record),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Eliminar'),
                 ),
               ],
             ),

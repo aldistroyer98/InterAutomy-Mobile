@@ -11,17 +11,10 @@ final class FakeSettingsRepository implements SettingsRepository {
   });
 
   AppSettings settings;
-  String? token;
 
   @override
   Future<AppSettings> load() async => settings;
 
   @override
   Future<void> save(AppSettings settings) async => this.settings = settings;
-
-  @override
-  Future<String?> readFutureToken() async => token;
-
-  @override
-  Future<void> saveFutureToken(String token) async => this.token = token;
 }

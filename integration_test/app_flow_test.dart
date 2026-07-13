@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:interautomy_mobile/app/app.dart';
 import 'package:interautomy_mobile/data/demo/demo_automation_gateway.dart';
+import 'package:interautomy_mobile/data/local/local_domain_store.dart';
 import 'package:interautomy_mobile/state/app_controller.dart';
 import 'package:interautomy_mobile/state/providers.dart';
 
@@ -18,6 +19,9 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+        localDomainStoreProvider.overrideWithValue(
+          LocalDomainStore(backend: InMemoryLocalDomainStoreBackend()),
+        ),
         automationGatewayProvider.overrideWithValue(
           DemoAutomationGateway(stepDuration: Duration.zero),
         ),

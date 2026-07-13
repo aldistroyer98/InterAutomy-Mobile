@@ -13,6 +13,9 @@ final class DemoHistoryRepository implements HistoryRepository {
       _items[record.executionId] = record;
 
   @override
+  Future<void> delete(String executionId) async => _items.remove(executionId);
+
+  @override
   Future<List<HistoryRecord>> search({
     String query = '',
     String? status,

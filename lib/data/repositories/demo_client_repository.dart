@@ -15,6 +15,19 @@ final class DemoClientRepository implements ClientRepository {
   Future<Client?> getById(String id) async => _clients[id];
 
   @override
+  Future<List<Client>> search(String query) async {
+    final needle = query.trim().toLowerCase();
+    return List.unmodifiable(
+      _clients.values
+          .where(
+            (client) =>
+                needle.isEmpty || client.nombre.toLowerCase().contains(needle),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  @override
   Future<Client> save(Client client) async {
     _clients[client.id] = client;
     return client;

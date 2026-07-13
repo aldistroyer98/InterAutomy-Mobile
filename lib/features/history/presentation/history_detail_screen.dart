@@ -41,6 +41,10 @@ class HistoryDetailScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 12),
+              Text(
+                'Modo ${record.executionMode} · ${currency.format(record.total)} · ${record.result}',
+              ),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -63,6 +67,11 @@ class HistoryDetailScreen extends ConsumerWidget {
                     ),
                     child: const Text('Restaurar envío completo'),
                   ),
+                  TextButton.icon(
+                    onPressed: () => deleteHistoryFlow(context, ref, record),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Eliminar'),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -77,7 +86,7 @@ class HistoryDetailScreen extends ConsumerWidget {
                   child: ListTile(
                     title: Text(product.nombre),
                     subtitle: Text(
-                      '${product.codigo} · ${product.linea.nombre}\n'
+                      '${product.hasVerifiedCode ? '${product.codigo} · ' : ''}${product.linea.nombre}\n'
                       'Cantidad ${product.cantidad} · ${currency.format(product.precio)} · '
                       'Comodato ${product.comodato?.codigo ?? 'Ninguno'}'
                       '${product.expiracion == null ? '' : ' · Expira ${DateFormat('dd/MM/yyyy').format(product.expiracion!)}'}',

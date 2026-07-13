@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:interautomy_mobile/app/app.dart';
 import 'package:interautomy_mobile/data/demo/demo_automation_gateway.dart';
 import 'package:interautomy_mobile/data/demo/demo_seed.dart';
+import 'package:interautomy_mobile/data/local/local_domain_store.dart';
 import 'package:interautomy_mobile/domain/entities/app_settings.dart';
 import 'package:interautomy_mobile/state/app_controller.dart';
 import 'package:interautomy_mobile/state/providers.dart';
@@ -24,6 +26,9 @@ Future<ProviderContainer> pumpApp(
     overrides: [
       settingsRepositoryProvider.overrideWithValue(
         settingsRepository ?? FakeSettingsRepository(),
+      ),
+      localDomainStoreProvider.overrideWithValue(
+        LocalDomainStore(backend: InMemoryLocalDomainStoreBackend()),
       ),
       automationGatewayProvider.overrideWithValue(
         DemoAutomationGateway(stepDuration: Duration.zero),
@@ -163,6 +168,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('validación inválida se muestra sin error técnico de layout', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('Ejecución'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('validate-order')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Validación requerida'), findsOneWidget);
+    expect(find.textContaining('Agrega al menos un producto'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('tema se puede cambiar desde configuración', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final container = await pumpApp(
@@ -198,7 +217,7 @@ void main() {
       ThemeMode.dark,
     );
     expect(
-      container.read(appControllerProvider).settings.theme,
+      container.read(settingsControllerProvider).theme,
       AppThemePreference.dark,
     );
 
@@ -210,7 +229,7 @@ void main() {
       ThemeMode.light,
     );
     expect(
-      container.read(appControllerProvider).settings.theme,
+      container.read(settingsControllerProvider).theme,
       AppThemePreference.light,
     );
     expect(tester.takeException(), isNull);
@@ -234,6 +253,8 @@ void main() {
         ),
       ),
     );
+    await tester.ensureVisible(find.byKey(const Key('developer-mode-switch')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('developer-mode-switch')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('diagnostic-mode-switch')), findsOneWidget);
@@ -241,6 +262,63 @@ void main() {
     await tester.tap(find.byKey(const Key('open-web-inspector')));
     await tester.pumpAndSettle();
     expect(find.text('Validación Automy'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'cliente selecciona un archivo OC sin exponer una ruta de disco',
+    (tester) async {
+      const channel = MethodChannel('interautomy/file_picker');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method != 'pickPurchaseOrderFile') return null;
+            return {
+              'uri': 'content://documents/orden-1',
+              'displayName': 'orden-compra.pdf',
+              'mimeType': 'application/pdf',
+            };
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+      final container = await pumpApp(tester);
+      final picker = find.byKey(const Key('pick-purchase-order-file'));
+      await tester.ensureVisible(picker);
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+
+      expect(find.text('orden-compra.pdf'), findsOneWidget);
+      expect(
+        container.read(appControllerProvider).selectedClient?.archivoOc,
+        'content://documents/orden-1',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('cliente convierte una institución heredada en entidad local', (
+    tester,
+  ) async {
+    final container = await pumpApp(tester);
+    final edit = find.byKey(const Key('edit-institution'));
+    await tester.drag(
+      find.byKey(const PageStorageKey('clients-scroll')),
+      const Offset(0, -320),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(edit);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('institution-name')),
+      'Hospital San Borja local',
+    );
+    await tester.tap(find.text('Guardar institución'));
+    await tester.pumpAndSettle();
+
+    final state = container.read(appControllerProvider);
+    expect(state.institutions.single.nombre, 'Hospital San Borja local');
+    expect(state.selectedClient?.institutionId, state.institutions.single.id);
     expect(tester.takeException(), isNull);
   });
 }

@@ -1,3 +1,5 @@
+import 'catalog_source.dart';
+
 enum AppThemePreference { system, light, dark }
 
 extension AppThemePreferenceLabel on AppThemePreference {
@@ -18,6 +20,7 @@ final class AppSettings {
     this.persistSession = true,
     this.loadTimeoutSeconds = 45,
     this.selectorTimeoutSeconds = 12,
+    this.catalogSource = CatalogSource.demo,
     required this.theme,
   });
 
@@ -29,6 +32,7 @@ final class AppSettings {
   final bool persistSession;
   final int loadTimeoutSeconds;
   final int selectorTimeoutSeconds;
+  final CatalogSource catalogSource;
   final AppThemePreference theme;
 
   bool get hasPortalConfiguration => portalUrl.trim().isNotEmpty;
@@ -42,6 +46,7 @@ final class AppSettings {
     bool? persistSession,
     int? loadTimeoutSeconds,
     int? selectorTimeoutSeconds,
+    CatalogSource? catalogSource,
     AppThemePreference? theme,
   }) => AppSettings(
     demoMode: demoMode ?? this.demoMode,
@@ -54,6 +59,7 @@ final class AppSettings {
     loadTimeoutSeconds: loadTimeoutSeconds ?? this.loadTimeoutSeconds,
     selectorTimeoutSeconds:
         selectorTimeoutSeconds ?? this.selectorTimeoutSeconds,
+    catalogSource: catalogSource ?? this.catalogSource,
     theme: theme ?? this.theme,
   );
 }

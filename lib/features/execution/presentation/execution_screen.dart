@@ -4,15 +4,17 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../domain/entities/execution.dart';
+import '../../../domain/validation/validation_result.dart';
 import '../../../state/app_controller.dart';
+import '../../../state/settings_controller.dart';
 
 class ExecutionScreen extends ConsumerWidget {
   const ExecutionScreen({super.key});
 
   Future<void> _execute(BuildContext context, WidgetRef ref) async {
-    final currentState = ref.read(appControllerProvider);
-    if (!currentState.settings.demoMode) {
-      if (!currentState.settings.hasPortalConfiguration) {
+    final settings = ref.read(settingsControllerProvider);
+    if (!settings.demoMode) {
+      if (!settings.hasPortalConfiguration) {
         await showDialog<void>(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -40,27 +42,59 @@ class ExecutionScreen extends ConsumerWidget {
       context.push('/portal');
       return;
     }
-    final issues = await ref
+    final result = await ref
         .read(appControllerProvider.notifier)
         .startExecution();
-    if (!context.mounted || issues.isEmpty) return;
+    if (!context.mounted || result.valid) return;
+    await _showValidation(context, result);
+  }
+
+  Future<void> _validate(BuildContext context, WidgetRef ref) async {
+    final result = ref
+        .read(appControllerProvider.notifier)
+        .validateCurrentOrder();
+    if (!context.mounted) return;
+    if (result.valid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('La informacion esta lista para ejecutar.'),
+        ),
+      );
+      return;
+    }
+    await _showValidation(context, result);
+  }
+
+  Future<void> _showValidation(
+    BuildContext context,
+    ValidationResult result,
+  ) async {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Validación requerida'),
         content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: ListView(
-            shrinkWrap: true,
-            children: issues
-                .map(
-                  (issue) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.error_outline),
-                    title: Text(issue),
-                  ),
-                )
-                .toList(growable: false),
+          constraints: const BoxConstraints(maxWidth: 520, maxHeight: 420),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: result.issues
+                  .map(
+                    (issue) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        issue.severity == ValidationSeverity.error
+                            ? Icons.error_outline
+                            : Icons.warning_amber_outlined,
+                      ),
+                      title: Text(issue.message),
+                      subtitle: Text(
+                        '${issue.code} · ${issue.correctiveAction}',
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
           ),
         ),
         actions: [
@@ -90,6 +124,7 @@ class ExecutionScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appControllerProvider);
+    final settings = ref.watch(settingsControllerProvider);
     final execution = state.execution;
     final currency = NumberFormat.currency(locale: 'es_PE', symbol: 'S/');
     final running =
@@ -111,7 +146,10 @@ class ExecutionScreen extends ConsumerWidget {
                     .toSet()
                     .join(', '),
                 products: state.selectedProducts.length,
-                total: currency.format(state.total),
+                total:
+                    state.selectedProducts.any((item) => !item.hasVerifiedPrice)
+                    ? 'Pendiente de precios'
+                    : currency.format(state.total),
               ),
               const SizedBox(height: 12),
               Card(
@@ -146,12 +184,30 @@ class ExecutionScreen extends ConsumerWidget {
                             color: Theme.of(context).colorScheme.error,
                           ),
                         ),
+                        if (state.errorCode != null)
+                          Text('Codigo: ${state.errorCode}'),
+                        if (settings.developerMode &&
+                            state.developerErrorDetails != null)
+                          SelectionArea(
+                            child: Text(
+                              state.developerErrorDetails!,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
                       ],
                       const SizedBox(height: 16),
                       Wrap(
                         spacing: 12,
                         runSpacing: 8,
                         children: [
+                          OutlinedButton.icon(
+                            key: const Key('validate-order'),
+                            onPressed: state.loading
+                                ? null
+                                : () => _validate(context, ref),
+                            icon: const Icon(Icons.fact_check_outlined),
+                            label: const Text('Validar informacion'),
+                          ),
                           FilledButton.icon(
                             key: const Key('execute-order'),
                             onPressed: running || state.loading

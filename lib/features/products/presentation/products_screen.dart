@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../domain/entities/comodato.dart';
 import '../../../domain/entities/product.dart';
+import '../../../domain/services/comodato_resolution_service.dart';
 import '../../../state/app_controller.dart';
 import '../../../state/app_state.dart';
 
@@ -47,6 +48,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           result.product,
           quantity: result.quantity,
           explicitComodato: result.comodato,
+          forceNoComodato: result.sinComodato,
         );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -151,7 +153,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      '${state.selectedProducts.length} producto(s) · ${currency.format(state.total)}',
+                      '${state.selectedProducts.length} producto(s) · ${state.selectedProducts.any((item) => !item.hasVerifiedPrice) ? 'Total pendiente de precios' : currency.format(state.total)}',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
@@ -292,7 +294,12 @@ class _ProductCard extends StatelessWidget {
                 ),
               ],
             ),
-            Text(product.codigo, style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              product.hasVerifiedCode
+                  ? product.codigo
+                  : 'Código no disponible en el maestro IA1',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const SizedBox(height: 8),
             Text(
               product.linea.nombre,
@@ -300,15 +307,23 @@ class _ProductCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              product.presentacion,
+              product.hasVerifiedPresentation
+                  ? product.presentacion
+                  : 'Presentación pendiente de fuente autorizada',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            Text('Comodato: ${product.comodato?.codigo ?? 'Ninguno'}'),
+            Text(
+              'Comodato: ${product.sinComodato ? 'Sin comodato' : product.comodato?.codigo ?? 'No resuelto'}',
+            ),
             const Spacer(),
             Row(
               children: [
-                Text(currency.format(product.precio)),
+                Text(
+                  product.hasVerifiedPrice
+                      ? currency.format(product.precio)
+                      : 'Precio pendiente',
+                ),
                 const Spacer(),
                 IconButton(
                   onPressed: onDecrease,
@@ -329,7 +344,9 @@ class _ProductCard extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                'Subtotal: ${currency.format(product.subtotal)}',
+                product.hasVerifiedPrice
+                    ? 'Subtotal: ${currency.format(product.subtotal)}'
+                    : 'Subtotal pendiente de precio',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
             ),
@@ -341,11 +358,17 @@ class _ProductCard extends StatelessWidget {
 }
 
 final class _AddProductResult {
-  const _AddProductResult(this.product, this.quantity, this.comodato);
+  const _AddProductResult(
+    this.product,
+    this.quantity,
+    this.comodato, {
+    this.sinComodato = false,
+  });
 
   final CatalogProduct product;
   final int quantity;
   final Comodato? comodato;
+  final bool sinComodato;
 }
 
 class _AddProductSheet extends StatefulWidget {
@@ -440,7 +463,9 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                       (product) => DropdownMenuItem(
                         value: product.id,
                         child: Text(
-                          '${product.codigo} · ${product.nombre}',
+                          product.hasVerifiedCode
+                              ? '${product.codigo} · ${product.nombre}'
+                              : product.nombre,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -465,6 +490,10 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                   const DropdownMenuItem(
                     value: null,
                     child: Text('Resolver automáticamente'),
+                  ),
+                  const DropdownMenuItem(
+                    value: '__none__',
+                    child: Text('Sin comodato'),
                   ),
                   ..._comodatos.map(
                     (comodato) => DropdownMenuItem(
@@ -503,6 +532,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                       product,
                       int.parse(_quantityController.text),
                       comodatoMatches.isEmpty ? null : comodatoMatches.first,
+                      sinComodato: _comodatoId == '__none__',
                     ),
                   );
                 },
@@ -548,7 +578,9 @@ class _EditProductSheetState extends State<_EditProductSheet> {
       text: widget.product.precio.toStringAsFixed(2),
     );
     _quantity = TextEditingController(text: '${widget.product.cantidad}');
-    _comodatoId = widget.product.comodato?.id ?? '__none__';
+    _comodatoId = widget.product.sinComodato
+        ? '__none__'
+        : widget.product.comodato?.id ?? '__auto__';
   }
 
   @override
@@ -611,6 +643,10 @@ class _EditProductSheetState extends State<_EditProductSheet> {
                 decoration: const InputDecoration(labelText: 'Comodato'),
                 items: [
                   const DropdownMenuItem(
+                    value: '__auto__',
+                    child: Text('Resolver automáticamente'),
+                  ),
+                  const DropdownMenuItem(
                     value: '__none__',
                     child: Text('Ninguno'),
                   ),
@@ -630,13 +666,33 @@ class _EditProductSheetState extends State<_EditProductSheet> {
                   final matches = _comodatos.where(
                     (item) => item.id == _comodatoId,
                   );
+                  final forceNone = _comodatoId == '__none__';
+                  final explicit = matches.isEmpty ? null : matches.first;
+                  final client = widget.appState.selectedClient;
+                  final resolution = client == null
+                      ? ComodatoResolution(
+                          source: forceNone
+                              ? ComodatoResolutionSource.none
+                              : explicit == null
+                              ? ComodatoResolutionSource.none
+                              : ComodatoResolutionSource.explicit,
+                          comodato: forceNone ? null : explicit,
+                        )
+                      : ComodatoResolutionService.resolve(
+                          client: client,
+                          lineId: widget.product.linea.id,
+                          explicit: explicit,
+                          forceNone: forceNone,
+                        );
                   Navigator.pop(
                     context,
                     widget.product.copyWith(
                       precio: double.parse(_price.text.replaceAll(',', '.')),
                       cantidad: int.parse(_quantity.text),
-                      comodato: matches.isEmpty ? null : matches.first,
-                      clearComodato: matches.isEmpty,
+                      comodato: resolution.comodato,
+                      clearComodato: resolution.comodato == null,
+                      sinComodato: forceNone,
+                      comodatoValid: resolution.valid,
                     ),
                   );
                 },
