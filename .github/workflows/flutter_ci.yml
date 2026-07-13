@@ -3,7 +3,7 @@ name: Flutter CI
 on:
   workflow_dispatch:
   push:
-    branches: [main, validation/automy-real-webview]
+    branches: [main, validation/automy-real-webview, feature/ia1-mobile-parity]
   pull_request:
     branches: [main]
 
@@ -44,6 +44,11 @@ jobs:
       - name: Validar catálogo IA1 y manifiesto
         run: python tools/catalog_migration/validate_catalog_assets.py
 
+      - name: Auditar calidad y completitud de catálogos
+        run: |
+          python tools/catalog_migration/audit_catalog_quality.py
+          python -m unittest tools.catalog_migration.test_audit_catalog_quality -v
+
       - name: Analizar
         run: flutter analyze
 
@@ -76,6 +81,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: catalog-migration-report
-          path: docs/CATALOG_MIGRATION_REPORT.md
+          path: |
+            docs/CATALOG_MIGRATION_REPORT.md
+            build/reports/catalog_quality_report.json
+            build/reports/catalog_quality_report.md
           if-no-files-found: error
           retention-days: 7
