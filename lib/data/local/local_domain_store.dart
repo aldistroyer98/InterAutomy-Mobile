@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../domain/entities/client.dart';
@@ -16,18 +17,32 @@ import '../../domain/entities/product.dart';
 /// de plataforma ni archivos reales.
 abstract interface class LocalDomainStoreBackend {
   Future<String?> read();
+  Future<String?> readBackup();
   Future<void> write(String contents);
+  Future<void> restore(String contents);
 }
 
 final class InMemoryLocalDomainStoreBackend implements LocalDomainStoreBackend {
-  String? _contents;
+  InMemoryLocalDomainStoreBackend({this.primaryContents, this.backupContents});
+
+  String? primaryContents;
+  String? backupContents;
 
   @override
-  Future<String?> read() async => _contents;
+  Future<String?> read() async => primaryContents;
+
+  @override
+  Future<String?> readBackup() async => backupContents;
 
   @override
   Future<void> write(String contents) async {
-    _contents = contents;
+    backupContents = primaryContents;
+    primaryContents = contents;
+  }
+
+  @override
+  Future<void> restore(String contents) async {
+    primaryContents = contents;
   }
 }
 
@@ -50,6 +65,11 @@ final class ApplicationDocumentsLocalDomainStoreBackend
     );
   }
 
+  Future<File> _backupFile() async {
+    final file = await _file();
+    return File('${file.path}.bak');
+  }
+
   @override
   Future<String?> read() async {
     final file = await _file();
@@ -58,13 +78,51 @@ final class ApplicationDocumentsLocalDomainStoreBackend
   }
 
   @override
+  Future<String?> readBackup() async {
+    final backup = await _backupFile();
+    if (!await backup.exists()) return null;
+    return backup.readAsString();
+  }
+
+  @override
   Future<void> write(String contents) async {
     final file = await _file();
+    final backup = await _backupFile();
     await file.parent.create(recursive: true);
     final temporary = File('${file.path}.tmp');
     await temporary.writeAsString(contents, flush: true);
-    if (await file.exists()) await file.delete();
-    await temporary.rename(file.path);
+    if (await file.exists()) {
+      if (await backup.exists()) await backup.delete();
+      await file.rename(backup.path);
+    }
+    try {
+      await temporary.rename(file.path);
+    } on Object {
+      if (!await file.exists() && await backup.exists()) {
+        await backup.copy(file.path);
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> restore(String contents) async {
+    final file = await _file();
+    await file.parent.create(recursive: true);
+    final temporary = File('${file.path}.recovery.tmp');
+    final corrupt = File('${file.path}.corrupt');
+    await temporary.writeAsString(contents, flush: true);
+    if (await corrupt.exists()) await corrupt.delete();
+    if (await file.exists()) await file.rename(corrupt.path);
+    try {
+      await temporary.rename(file.path);
+      if (await corrupt.exists()) await corrupt.delete();
+    } on Object {
+      if (!await file.exists() && await corrupt.exists()) {
+        await corrupt.rename(file.path);
+      }
+      rethrow;
+    }
   }
 }
 
@@ -80,19 +138,20 @@ final class LocalDomainStoreException implements Exception {
 
 /// Almacenamiento local estructurado, con migración explícita de esquema.
 ///
-/// El documento actual es `schemaVersion: 1`. La migración v0 permite abrir
-/// documentos previos sin la marca de versión y los reescribe en el formato
-/// actual la siguiente vez que se guarde información.
+/// El documento actual es `schemaVersion: 2` e incluye checksum SHA-256. Las
+/// migraciones v0 y v1 permiten abrir documentos anteriores; toda escritura
+/// posterior los guarda en el formato actual.
 final class LocalDomainStore {
   LocalDomainStore({required this.backend});
 
   factory LocalDomainStore.applicationDocuments() =>
       LocalDomainStore(backend: ApplicationDocumentsLocalDomainStoreBackend());
 
-  static const schemaVersion = 1;
+  static const schemaVersion = 2;
 
   final LocalDomainStoreBackend backend;
   _LocalDomainData? _data;
+  Future<_LocalDomainData>? _loading;
   Future<void> _writeQueue = Future<void>.value();
 
   Future<List<Client>> getClients() async =>
@@ -147,21 +206,52 @@ final class LocalDomainStore {
   Future<_LocalDomainData> _load() async {
     final cached = _data;
     if (cached != null) return cached;
-    final raw = await backend.read();
-    if (raw == null || raw.trim().isEmpty) {
-      return _data = _LocalDomainData.empty();
+    return _loading ??= _loadUncached().whenComplete(() => _loading = null);
+  }
+
+  Future<_LocalDomainData> _loadUncached() async {
+    final primary = await backend.read();
+    LocalDomainStoreException? primaryFailure;
+    if (primary != null && primary.trim().isNotEmpty) {
+      try {
+        return _data = _decode(primary);
+      } on LocalDomainStoreException catch (error) {
+        primaryFailure = error;
+      }
     }
+
+    final backup = await backend.readBackup();
+    if (backup != null && backup.trim().isNotEmpty) {
+      try {
+        final recovered = _decode(backup);
+        await backend.restore(backup);
+        return _data = recovered;
+      } on LocalDomainStoreException catch (backupFailure) {
+        throw LocalDomainStoreException(
+          'LOCAL_STORE_RECOVERY_FAILED',
+          'El documento principal y su copia de respaldo no son válidos. '
+              'Principal: ${primaryFailure?.code ?? 'ausente'}; '
+              'respaldo: ${backupFailure.code}.',
+        );
+      }
+    }
+
+    if (primaryFailure != null) throw primaryFailure;
+    return _data = _LocalDomainData.empty();
+  }
+
+  _LocalDomainData _decode(String raw) {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! Map<String, Object?>) {
         throw const FormatException('La raíz debe ser un objeto JSON.');
       }
-      return _data = _LocalDomainData.fromJson(decoded);
+      return _LocalDomainData.fromJson(decoded);
     } on LocalDomainStoreException {
       rethrow;
     } on Object catch (error) {
       throw LocalDomainStoreException(
-        'LOCAL_STORE_LOAD_FAILED',
+        'LOCAL_STORE_CORRUPTED',
         'No se pudo leer la información local estructurada: $error',
       );
     }
@@ -169,9 +259,11 @@ final class LocalDomainStore {
 
   Future<void> _update(void Function(_LocalDomainData data) operation) {
     final pending = _writeQueue.then((_) async {
-      final data = await _load();
-      operation(data);
-      await backend.write(jsonEncode(data.toJson()));
+      final current = await _load();
+      final next = current.copy();
+      operation(next);
+      await backend.write(jsonEncode(next.toJson()));
+      _data = next;
     });
     _writeQueue = pending.catchError((_) {});
     return pending;
@@ -203,12 +295,16 @@ final class _LocalDomainData {
     }
     final migrated = switch (version) {
       0 => _migrateV0(json),
+      1 => _migrateV1(json),
       LocalDomainStore.schemaVersion => json,
       _ => throw LocalDomainStoreException(
         'LOCAL_STORE_SCHEMA_UNSUPPORTED',
         'No existe una migración para el esquema local $version.',
       ),
     };
+    if (version == LocalDomainStore.schemaVersion) {
+      _validateChecksum(migrated);
+    }
     return _LocalDomainData(
       clients: _indexed<Client>(migrated['clients'], _clientFromJson),
       institutions: _indexed<Institution>(
@@ -225,15 +321,25 @@ final class _LocalDomainData {
   final Map<String, HistoryRecord> history;
   final Map<String, OrderProfile> profiles;
 
-  Map<String, Object?> toJson() => {
-    'schemaVersion': LocalDomainStore.schemaVersion,
-    'clients': clients.values.map(_clientToJson).toList(growable: false),
-    'institutions': institutions.values
-        .map(_institutionToJson)
-        .toList(growable: false),
-    'history': history.values.map(_historyToJson).toList(growable: false),
-    'profiles': profiles.values.map(_profileToJson).toList(growable: false),
-  };
+  _LocalDomainData copy() => _LocalDomainData(
+    clients: Map.of(clients),
+    institutions: Map.of(institutions),
+    history: Map.of(history),
+    profiles: Map.of(profiles),
+  );
+
+  Map<String, Object?> toJson() {
+    final payload = <String, Object?>{
+      'schemaVersion': LocalDomainStore.schemaVersion,
+      'clients': clients.values.map(_clientToJson).toList(growable: false),
+      'institutions': institutions.values
+          .map(_institutionToJson)
+          .toList(growable: false),
+      'history': history.values.map(_historyToJson).toList(growable: false),
+      'profiles': profiles.values.map(_profileToJson).toList(growable: false),
+    };
+    return {...payload, 'checksum': _documentChecksum(payload)};
+  }
 
   static Map<String, Object?> _migrateV0(Map<String, Object?> json) => {
     'schemaVersion': LocalDomainStore.schemaVersion,
@@ -242,6 +348,36 @@ final class _LocalDomainData {
     'history': json['history'] ?? const [],
     'profiles': json['profiles'] ?? const [],
   };
+
+  static Map<String, Object?> _migrateV1(Map<String, Object?> json) =>
+      _migrateV0(json);
+
+  static void _validateChecksum(Map<String, Object?> json) {
+    final checksum = _text(json, 'checksum');
+    final payload = Map<String, Object?>.of(json)..remove('checksum');
+    if (checksum.isEmpty || checksum != _documentChecksum(payload)) {
+      throw const LocalDomainStoreException(
+        'LOCAL_STORE_CHECKSUM_INVALID',
+        'El checksum del almacenamiento local no coincide con su contenido.',
+      );
+    }
+  }
+}
+
+String _documentChecksum(Map<String, Object?> payload) =>
+    sha256.convert(utf8.encode(jsonEncode(_canonicalize(payload)))).toString();
+
+Object? _canonicalize(Object? value) {
+  if (value is Map<String, Object?>) {
+    final keys = value.keys.toList(growable: false)..sort();
+    return <String, Object?>{
+      for (final key in keys) key: _canonicalize(value[key]),
+    };
+  }
+  if (value is List<Object?>) {
+    return value.map(_canonicalize).toList(growable: false);
+  }
+  return value;
 }
 
 Map<String, T> _indexed<T>(
